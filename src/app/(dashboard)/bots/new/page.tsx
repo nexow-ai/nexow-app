@@ -1,5 +1,6 @@
 "use client";
 
+import { BacktestPanel } from "@/components/backtest/backtest-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,6 +9,8 @@ import {
   CardDescription,
   CardTitle,
 } from "@/components/ui/card";
+import { RuleDisplay } from "@/components/agents/rule-display";
+import { useBacktest } from "@/hooks/use-backtest";
 import { useSubscription } from "@/hooks/use-subscription";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -24,14 +27,11 @@ import {
   ArrowLeft,
   ArrowRight,
   Bot,
-  Brain,
   Check,
   ChevronDown,
   ChevronRight,
-  Globe,
   Loader2,
   Lock,
-  Newspaper,
   Rocket,
   Search,
   Shield,
@@ -39,11 +39,11 @@ import {
   TrendingDown,
   TrendingUp,
   X,
+  Zap,
   BarChart3,
   Activity,
   DollarSign,
   CalendarClock,
-  Radio,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -53,13 +53,14 @@ import { useEffect, useMemo, useState } from "react";
 // Types
 // ---------------------------------------------------------------------------
 
-type WizardStep = "assets" | "entry" | "exit" | "review";
+type WizardStep = "assets" | "entry" | "exit" | "review" | "backtest";
 
 const STEPS: { key: WizardStep; label: string }[] = [
   { key: "assets", label: "Assets" },
-  { key: "entry", label: "Data & Logic" },
+  { key: "entry", label: "Entry" },
   { key: "exit", label: "Exit" },
   { key: "review", label: "Review" },
+  { key: "backtest", label: "Backtest" },
 ];
 
 interface ExitConfig {
@@ -73,30 +74,11 @@ interface ExitConfig {
   event_based: string;
 }
 
-const DATA_PROVIDERS = [
-  { id: "technical_analysis", label: "Technical Analysis", icon: BarChart3 },
-  { id: "news_sentiment", label: "News Sentiment", icon: Newspaper },
-  { id: "economic_calendar", label: "Economic Calendar", icon: CalendarClock },
-  { id: "web_search", label: "Web Search", icon: Globe },
-  { id: "price_action", label: "Price Action", icon: Activity },
-  { id: "order_flow", label: "Order Flow / COT", icon: Radio },
-];
-
 const ENTRY_EXAMPLES = [
-  "Analyze macro sentiment and Gold correlation before entering USD pairs",
-  "Read latest news and economic releases, trade only when sentiment is clear",
-  "Combine technical levels with fundamental analysis for high-conviction trades",
-  "Monitor multiple timeframes and enter only when all align in the same direction",
-];
-
-const SCHEDULE_OPTIONS = [
-  { id: "every_tick", label: "Every tick" },
-  { id: "5m", label: "Every 5 minutes" },
-  { id: "15m", label: "Every 15 minutes" },
-  { id: "30m", label: "Every 30 minutes" },
-  { id: "hourly", label: "Hourly" },
-  { id: "4h", label: "Every 4 hours" },
-  { id: "daily", label: "Daily" },
+  "Buy when the last 3 M15 candles are red and the H4 candle is green (dip in uptrend)",
+  "Enter long when H1 RSI(14) drops below 30 and D1 trend is bullish (EMA 50 > 200)",
+  "Short when M5 MACD crosses down and H1 price is below Bollinger lower band",
+  "Buy on M15 bullish engulfing if H4 shows RSI divergence and D1 EMA(50) is rising",
 ];
 
 interface GeneratedAgent {
@@ -111,7 +93,7 @@ interface GeneratedAgent {
 // Main Component
 // ---------------------------------------------------------------------------
 
-export default function NewAgentPage() {
+export default function NewBotPage() {
   const router = useRouter();
   const { data: subscription, plan, loading: subLoading } = useSubscription();
 
@@ -153,12 +135,8 @@ export default function NewAgentPage() {
     new Set(["forex_major"])
   );
 
-  // Step 2: Entry (agent-specific)
+  // Step 2: Entry
   const [entryDescription, setEntryDescription] = useState("");
-  const [dataProviders, setDataProviders] = useState<Set<string>>(
-    new Set(["technical_analysis"])
-  );
-  const [evaluationSchedule, setEvaluationSchedule] = useState("hourly");
 
   // Step 3: Exit
   const [exitConfig, setExitConfig] = useState<ExitConfig>({
@@ -177,6 +155,9 @@ export default function NewAgentPage() {
   const [deploying, setDeploying] = useState(false);
   const [generated, setGenerated] = useState<GeneratedAgent | null>(null);
   const [error, setError] = useState("");
+
+  // Step 5: Backtest
+  const { state: backtestState, runBacktest, reset: resetBacktest } = useBacktest();
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -208,19 +189,11 @@ export default function NewAgentPage() {
     });
   }
 
-  function toggleDataProvider(id: string) {
-    setDataProviders((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
   function updateExit(field: keyof ExitConfig, value: string | boolean) {
     setExitConfig((prev) => ({ ...prev, [field]: value }));
   }
 
+  // Filter instruments by search query
   const filteredGroups = useMemo(() => {
     if (!searchQuery.trim()) return instrumentGroups;
     const q = searchQuery.toLowerCase();
@@ -235,6 +208,7 @@ export default function NewAgentPage() {
       .filter((g) => g.instruments.length > 0);
   }, [searchQuery, instrumentGroups]);
 
+  // Build the prompt to send to the AI
   function buildPrompt(): string {
     const instrumentsArr = Array.from(selectedInstruments);
     const instrumentsStr = instrumentsArr
@@ -242,10 +216,8 @@ export default function NewAgentPage() {
       .join(", ");
 
     let prompt = `Trading instruments: ${instrumentsStr}\n\n`;
-    prompt += `Agent type: agent\n\n`;
-    prompt += `Data providers: ${Array.from(dataProviders).join(", ")}\n`;
-    prompt += `Evaluation schedule: ${evaluationSchedule}\n`;
-    prompt += `Analysis logic:\n${entryDescription}\n\n`;
+    prompt += `Agent type: bot\n\n`;
+    prompt += `Entry signals:\n${entryDescription}\n\n`;
 
     prompt += "Exit strategy:\n";
     if (exitConfig.stop_loss_pct)
@@ -277,9 +249,8 @@ export default function NewAgentPage() {
         body: JSON.stringify({
           prompt: buildPrompt(),
           instruments: Array.from(selectedInstruments),
-          agent_type: "agent",
+          agent_type: "bot",
           entry_description: entryDescription,
-          data_providers: Array.from(dataProviders),
           exit_config: exitConfig,
         }),
       });
@@ -298,7 +269,7 @@ export default function NewAgentPage() {
     }
   }
 
-  async function handleDeploy() {
+  async function handleDeployWithBacktest() {
     if (!generated) return;
     setError("");
     setDeploying(true);
@@ -333,31 +304,98 @@ export default function NewAgentPage() {
         };
       });
 
-      const { data, error: insertError } = await (
+      // 1. Insert the bot
+      const { data: agentData, error: insertError } = await (
         supabase.from as Function
       )("agents")
         .insert({
           creator_id: user.id,
           name: generated.name,
           description: generated.description,
-          type: "agent",
+          type: "bot",
           config,
           prompt: buildPrompt(),
           instrument: primaryInstrument,
           instruments: uniqueInstruments,
           timeframe: primaryTimeframe,
-          llm_provider:
-            (config as Record<string, unknown>).llm_provider ?? "openai",
-          llm_model:
-            (config as Record<string, unknown>).llm_model ?? "gpt-4o-mini",
-          evaluation_schedule: evaluationSchedule,
+          llm_provider: "openai",
+          llm_model: "gpt-4o-mini",
           status: "active",
         })
         .select()
         .single();
 
       if (insertError) throw insertError;
-      router.push(`/agents/${(data as { id: string }).id}`);
+      const agentId = (agentData as { id: string }).id;
+
+      // 2. If backtest completed, save backtest record and trades
+      if (
+        backtestState.phase === "complete" &&
+        backtestState.result
+      ) {
+        const bt = backtestState.result;
+
+        const { data: btData, error: btError } = await (
+          supabase.from as Function
+        )("backtests")
+          .insert({
+            agent_id: agentId,
+            creator_id: user.id,
+            config: generated.config,
+            instruments: uniqueInstruments,
+            exit_config: {
+              stop_loss_pct: exitConfig.stop_loss_pct
+                ? parseFloat(exitConfig.stop_loss_pct)
+                : null,
+              take_profit_pct: exitConfig.take_profit_pct
+                ? parseFloat(exitConfig.take_profit_pct)
+                : null,
+            },
+            period_start: new Date(
+              Date.now() - 365 * 24 * 60 * 60 * 1000
+            ).toISOString(),
+            period_end: new Date().toISOString(),
+            status: "completed",
+            progress_pct: 100,
+            total_trades: bt.stats.total_trades,
+            total_return_pct: bt.stats.total_return_pct,
+            win_rate: bt.stats.win_rate,
+            max_drawdown: bt.stats.max_drawdown,
+            sharpe_ratio: bt.stats.sharpe_ratio,
+            profit_factor: bt.stats.profit_factor,
+            equity_curve: bt.equity_curve,
+          })
+          .select()
+          .single();
+
+        if (btError) {
+          console.error("Failed to save backtest:", btError);
+        } else if (bt.trades.length > 0) {
+          const backtestId = (btData as { id: string }).id;
+
+          const tradeRecords = bt.trades.map((t) => ({
+            agent_id: agentId,
+            backtest_id: backtestId,
+            instrument: t.instrument,
+            direction: t.direction,
+            entry_price: t.entry_price,
+            exit_price: t.exit_price,
+            return_pct: t.return_pct,
+            stop_loss_pct: t.stop_loss_pct,
+            take_profit_pct: t.take_profit_pct,
+            status: t.status,
+            opened_at: t.entry_time,
+            closed_at: t.exit_time,
+          }));
+
+          for (let i = 0; i < tradeRecords.length; i += 100) {
+            const batch = tradeRecords.slice(i, i + 100);
+            await (supabase.from as Function)("trades").insert(batch);
+          }
+        }
+      }
+
+      router.push(`/bots/${agentId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Deploy failed");
       setDeploying(false);
@@ -374,38 +412,26 @@ export default function NewAgentPage() {
     | Record<string, number>
     | undefined;
 
-  // Plan limit checks
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+
   const atAgentLimit =
     subscription &&
     !isUnlimited(plan.limits.maxAgents) &&
     subscription.agentCount >= plan.limits.maxAgents;
   const noCredits =
     subscription && subscription.creditsRemaining < CREDIT_COSTS.agentGeneration;
-  const agentBlocked = !plan.limits.aiAgents;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 pb-12">
       {/* Plan limit banners */}
-      {agentBlocked && (
-        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
-          <div className="flex items-center gap-2">
-            <Lock className="h-4 w-4 text-amber-400" />
-            <p className="text-sm font-medium text-amber-400">
-              AI Agents require a Starter plan or higher.{" "}
-              <Link href="/pricing" className="underline hover:text-amber-300">
-                Upgrade your plan
-              </Link>
-            </p>
-          </div>
-        </div>
-      )}
-
       {subscription && atAgentLimit && (
         <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4">
           <div className="flex items-center gap-2">
             <Lock className="h-4 w-4 text-red-400" />
             <p className="text-sm font-medium text-red-400">
-              Agent limit reached ({plan.limits.maxAgents}/{plan.limits.maxAgents}).{" "}
+              Bot limit reached ({plan.limits.maxAgents}/{plan.limits.maxAgents}).{" "}
               <Link href="/pricing" className="underline hover:text-red-300">
                 Upgrade your plan
               </Link>{" "}
@@ -453,9 +479,9 @@ export default function NewAgentPage() {
               disabled={i > stepIndex}
               className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-colors ${
                 step === s.key
-                  ? "bg-purple-600 text-white"
+                  ? "bg-emerald-600 text-white"
                   : i < stepIndex
-                    ? "bg-purple-900/50 text-purple-400 hover:bg-purple-900/70 cursor-pointer"
+                    ? "bg-emerald-900/50 text-emerald-400 hover:bg-emerald-900/70 cursor-pointer"
                     : "bg-zinc-800 text-zinc-500"
               }`}
             >
@@ -485,10 +511,12 @@ export default function NewAgentPage() {
               Select Trading Assets
             </h1>
             <p className="mt-1 text-sm text-zinc-400">
-              Choose the instruments your agent will monitor and trade.
+              Choose the instruments your bot will trade. Timeframes are
+              defined in the entry and exit strategy.
             </p>
           </div>
 
+          {/* Selected instruments bar */}
           {selectedInstruments.size > 0 && (
             <Card className="!p-4">
               <div className="mb-2 flex items-center justify-between">
@@ -506,9 +534,9 @@ export default function NewAgentPage() {
                 {Array.from(selectedInstruments).map((id) => (
                   <div
                     key={id}
-                    className="flex items-center gap-1.5 rounded-lg border border-purple-500/30 bg-purple-500/5 px-2.5 py-1.5"
+                    className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-2.5 py-1.5"
                   >
-                    <span className="text-xs font-semibold text-purple-300">
+                    <span className="text-xs font-semibold text-emerald-300">
                       {id.replace("_", "/")}
                     </span>
                     <button
@@ -523,6 +551,7 @@ export default function NewAgentPage() {
             </Card>
           )}
 
+          {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
             <input
@@ -530,13 +559,14 @@ export default function NewAgentPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search instruments... (e.g. Gold, EUR, Nasdaq)"
-              className="w-full rounded-xl border border-zinc-800/60 bg-zinc-900/50 py-2.5 pl-10 pr-4 text-sm text-zinc-100 placeholder:text-zinc-600 transition-all focus:border-purple-500/50 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+              className="w-full rounded-xl border border-zinc-800/60 bg-zinc-900/50 py-2.5 pl-10 pr-4 text-sm text-zinc-100 placeholder:text-zinc-600 transition-all focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
             />
           </div>
 
+          {/* Instrument groups */}
           {loadingInstruments && (
             <div className="flex items-center gap-2 rounded-xl border border-zinc-800/60 bg-zinc-900/30 px-4 py-3">
-              <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
+              <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
               <span className="text-sm text-zinc-400">Loading instruments from Oanda...</span>
             </div>
           )}
@@ -586,14 +616,14 @@ export default function NewAgentPage() {
                               onClick={() => toggleInstrument(inst.id)}
                               className={`group flex items-center gap-2 rounded-lg px-3 py-2 text-left transition-all ${
                                 isSelected
-                                  ? "border border-purple-500/40 bg-purple-500/10"
+                                  ? "border border-emerald-500/40 bg-emerald-500/10"
                                   : "border border-transparent hover:border-zinc-700/60 hover:bg-zinc-800/40"
                               }`}
                             >
                               <div
                                 className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
                                   isSelected
-                                    ? "border-purple-500 bg-purple-500"
+                                    ? "border-emerald-500 bg-emerald-500"
                                     : "border-zinc-600 group-hover:border-zinc-500"
                                 }`}
                               >
@@ -603,7 +633,7 @@ export default function NewAgentPage() {
                               </div>
                               <div className="min-w-0">
                                 <p
-                                  className={`text-xs font-semibold ${isSelected ? "text-purple-300" : "text-zinc-300"}`}
+                                  className={`text-xs font-semibold ${isSelected ? "text-emerald-300" : "text-zinc-300"}`}
                                 >
                                   {inst.id.replace("_", "/")}
                                 </p>
@@ -622,12 +652,13 @@ export default function NewAgentPage() {
             })}
           </div>
 
+          {/* Navigation */}
           <div className="flex justify-end pt-2">
             <Button
               onClick={() => setStep("entry")}
-              disabled={!canProceedFromAssets || agentBlocked}
+              disabled={!canProceedFromAssets}
             >
-              Data & Logic
+              Entry Strategy
               <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
@@ -635,99 +666,30 @@ export default function NewAgentPage() {
       )}
 
       {/* ================================================================== */}
-      {/* STEP 2: DATA FEEDS & ANALYSIS LOGIC                                */}
+      {/* STEP 2: ENTRY STRATEGY                                             */}
       {/* ================================================================== */}
       {step === "entry" && (
         <div className="space-y-5">
           <div>
             <h1 className="text-xl font-semibold text-zinc-100">
-              Data Feeds & Analysis Logic
+              Define Entry Strategy
             </h1>
             <p className="mt-1 text-sm text-zinc-400">
-              Configure the data sources your agent will use and describe how it should analyze the market.
+              Describe the rule-based signals your bot will use to enter trades.
             </p>
           </div>
 
-          {/* Data providers */}
-          <Card className="!p-4">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              Data Providers
-            </p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {DATA_PROVIDERS.map((dp) => {
-                const isActive = dataProviders.has(dp.id);
-                const Icon = dp.icon;
-                return (
-                  <button
-                    key={dp.id}
-                    onClick={() => toggleDataProvider(dp.id)}
-                    className={`flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-all ${
-                      isActive
-                        ? "border-purple-500/30 bg-purple-500/5"
-                        : "border-zinc-800/40 hover:border-zinc-700/60"
-                    }`}
-                  >
-                    <div
-                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
-                        isActive
-                          ? "border-purple-500 bg-purple-500"
-                          : "border-zinc-600"
-                      }`}
-                    >
-                      {isActive && (
-                        <Check className="h-2.5 w-2.5 text-white" />
-                      )}
-                    </div>
-                    <Icon
-                      className={`h-3.5 w-3.5 ${isActive ? "text-purple-400" : "text-zinc-500"}`}
-                    />
-                    <span
-                      className={`text-xs font-medium ${isActive ? "text-purple-300" : "text-zinc-400"}`}
-                    >
-                      {dp.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </Card>
-
-          {/* Evaluation schedule */}
-          <Card className="!p-4">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              Evaluation Schedule
-            </p>
-            <p className="mb-3 text-xs text-zinc-500">
-              How often the agent will evaluate the market and decide on trades.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {SCHEDULE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.id}
-                  onClick={() => setEvaluationSchedule(opt.id)}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
-                    evaluationSchedule === opt.id
-                      ? "border-purple-500/40 bg-purple-500/10 text-purple-300"
-                      : "border-zinc-800/40 text-zinc-400 hover:border-zinc-700/60"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </Card>
-
-          {/* Analysis logic */}
+          {/* Entry description */}
           <div>
             <label className="mb-2 block text-sm font-medium text-zinc-300">
-              Describe the analysis logic
+              Describe your entry signals
             </label>
             <textarea
               value={entryDescription}
               onChange={(e) => setEntryDescription(e.target.value)}
-              placeholder="e.g. Check the D1 trend direction first, then look for H1 setups. Analyze macro sentiment and news, only enter when multiple timeframes and data sources align..."
+              placeholder="e.g. Buy when the last 3 M15 candles are red but the H4 candle is green (dip buying in uptrend). Use RSI(14) on H1 as confirmation — only enter if below 40. Sell when H1 RSI crosses above 70..."
               rows={5}
-              className="w-full rounded-xl border border-zinc-800/60 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-600 transition-all focus:border-purple-500/50 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+              className="w-full rounded-xl border border-zinc-800/60 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-600 transition-all focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
             />
           </div>
 
@@ -740,7 +702,7 @@ export default function NewAgentPage() {
                   key={example}
                   type="button"
                   onClick={() => setEntryDescription(example)}
-                  className="rounded-full border border-zinc-800 px-3 py-1 text-xs text-zinc-400 transition-colors hover:border-purple-800 hover:text-purple-400"
+                  className="rounded-full border border-zinc-800 px-3 py-1 text-xs text-zinc-400 transition-colors hover:border-emerald-800 hover:text-emerald-400"
                 >
                   {example}
                 </button>
@@ -748,6 +710,7 @@ export default function NewAgentPage() {
             </div>
           </div>
 
+          {/* Navigation */}
           <div className="flex gap-3 pt-2">
             <Button variant="outline" onClick={() => setStep("assets")}>
               <ArrowLeft className="h-4 w-4" />
@@ -775,14 +738,15 @@ export default function NewAgentPage() {
               Define Exit Strategy
             </h1>
             <p className="mt-1 text-sm text-zinc-400">
-              Configure how and when your agent closes positions. You need at
+              Configure how and when your bot closes positions. You need at
               least a stop loss or take profit.
             </p>
           </div>
 
+          {/* Static Levels */}
           <Card className="!p-5">
             <div className="mb-4 flex items-center gap-2">
-              <Shield className="h-4 w-4 text-purple-400" />
+              <Shield className="h-4 w-4 text-emerald-400" />
               <span className="text-sm font-semibold text-zinc-200">
                 Static Levels
               </span>
@@ -828,10 +792,11 @@ export default function NewAgentPage() {
               </div>
             </div>
 
+            {/* Trailing Stop */}
             <div className="mt-4 border-t border-zinc-800/40 pt-4">
               <label className="flex cursor-pointer items-center gap-3">
                 <div
-                  className={`relative h-5 w-9 rounded-full transition-colors ${exitConfig.trailing_stop ? "bg-purple-500" : "bg-zinc-700"}`}
+                  className={`relative h-5 w-9 rounded-full transition-colors ${exitConfig.trailing_stop ? "bg-emerald-500" : "bg-zinc-700"}`}
                   onClick={() =>
                     updateExit("trailing_stop", !exitConfig.trailing_stop)
                   }
@@ -855,13 +820,14 @@ export default function NewAgentPage() {
                       updateExit("trailing_stop_pct", e.target.value)
                     }
                     placeholder="Trail distance (%)"
-                    className="w-full rounded-lg border border-zinc-800/60 bg-zinc-900/50 px-4 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/20"
+                    className="w-full rounded-lg border border-zinc-800/60 bg-zinc-900/50 px-4 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-emerald-500/50 focus:outline-none focus:ring-1 focus:ring-emerald-500/20"
                   />
                 </div>
               )}
             </div>
           </Card>
 
+          {/* PnL Based */}
           <Card className="!p-5">
             <div className="mb-4 flex items-center gap-2">
               <DollarSign className="h-4 w-4 text-amber-400" />
@@ -906,6 +872,7 @@ export default function NewAgentPage() {
             </div>
           </Card>
 
+          {/* Market Conditions */}
           <Card className="!p-5">
             <div className="mb-4 flex items-center gap-2">
               <Activity className="h-4 w-4 text-blue-400" />
@@ -919,16 +886,35 @@ export default function NewAgentPage() {
               onChange={(e) =>
                 updateExit("market_conditions", e.target.value)
               }
-              placeholder="e.g. Close all positions if VIX spikes above 30, close if trend reversal on H4..."
+              placeholder="e.g. Close all positions if VIX spikes above 30, close if trend reversal on H4, exit if spread widens beyond normal..."
               rows={3}
               className="w-full rounded-lg border border-zinc-800/60 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-blue-500/50 focus:outline-none focus:ring-1 focus:ring-blue-500/20"
             />
           </Card>
 
+          {/* Event-Based */}
+          <Card className="!p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <CalendarClock className="h-4 w-4 text-purple-400" />
+              <span className="text-sm font-semibold text-zinc-200">
+                Event-Based Exits
+              </span>
+              <span className="text-xs text-zinc-500">(optional)</span>
+            </div>
+            <textarea
+              value={exitConfig.event_based}
+              onChange={(e) => updateExit("event_based", e.target.value)}
+              placeholder="e.g. Close before major NFP releases, exit if correlation between instruments breaks, close on Friday before market close..."
+              rows={3}
+              className="w-full rounded-lg border border-zinc-800/60 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/20"
+            />
+          </Card>
+
+          {/* Navigation */}
           <div className="flex gap-3 pt-2">
             <Button variant="outline" onClick={() => setStep("entry")}>
               <ArrowLeft className="h-4 w-4" />
-              Data & Logic
+              Entry
             </Button>
             <Button
               className="flex-1"
@@ -955,11 +941,13 @@ export default function NewAgentPage() {
               Review & Deploy
             </h1>
             <p className="mt-1 text-sm text-zinc-400">
-              Review your configuration and generate the agent.
+              Review your configuration and generate the bot.
             </p>
           </div>
 
+          {/* Summary */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {/* Instruments */}
             <Card className="!p-4">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
                 Instruments
@@ -976,41 +964,27 @@ export default function NewAgentPage() {
               </div>
             </Card>
 
+            {/* Bot Type */}
             <Card className="!p-4">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                Type & Schedule
+                Type
               </p>
-              <div className="flex items-center gap-2">
-                <Badge variant="warning">
-                  <Brain className="mr-1 h-3 w-3" /> Agent
-                </Badge>
-                <span className="text-xs text-zinc-500">
-                  {SCHEDULE_OPTIONS.find((s) => s.id === evaluationSchedule)?.label}
-                </span>
-              </div>
-              {dataProviders.size > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {Array.from(dataProviders).map((dp) => (
-                    <span
-                      key={dp}
-                      className="rounded bg-zinc-800/60 px-1.5 py-0.5 text-[10px] text-zinc-500"
-                    >
-                      {dp.replace(/_/g, " ")}
-                    </span>
-                  ))}
-                </div>
-              )}
+              <Badge variant="info">
+                <Zap className="mr-1 h-3 w-3" /> Bot
+              </Badge>
             </Card>
 
+            {/* Entry */}
             <Card className="!p-4 sm:col-span-2">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                Analysis Logic
+                Entry Strategy
               </p>
               <p className="text-sm leading-relaxed text-zinc-300">
                 {entryDescription}
               </p>
             </Card>
 
+            {/* Exit */}
             <Card className="!p-4 sm:col-span-2">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
                 Exit Strategy
@@ -1033,22 +1007,43 @@ export default function NewAgentPage() {
                     Trail: {exitConfig.trailing_stop_pct}%
                   </span>
                 )}
+                {exitConfig.max_daily_loss_pct && (
+                  <span className="text-zinc-400">
+                    Max daily loss: {exitConfig.max_daily_loss_pct}%
+                  </span>
+                )}
+                {exitConfig.daily_profit_target_pct && (
+                  <span className="text-zinc-400">
+                    Daily target: {exitConfig.daily_profit_target_pct}%
+                  </span>
+                )}
               </div>
+              {exitConfig.market_conditions && (
+                <p className="mt-2 text-xs text-zinc-500">
+                  Market: {exitConfig.market_conditions}
+                </p>
+              )}
+              {exitConfig.event_based && (
+                <p className="mt-1 text-xs text-zinc-500">
+                  Events: {exitConfig.event_based}
+                </p>
+              )}
             </Card>
           </div>
 
+          {/* Generate / Preview */}
           {!generated ? (
             <>
               {error && <p className="text-sm text-red-400">{error}</p>}
               <Button
                 onClick={handleGenerate}
                 loading={generating}
-                disabled={!!atAgentLimit || !!noCredits || agentBlocked}
+                disabled={!!atAgentLimit || !!noCredits}
                 className="w-full"
                 size="lg"
               >
                 {generating ? (
-                  "Generating agent..."
+                  "Generating bot..."
                 ) : atAgentLimit ? (
                   <>
                     <Lock className="h-4 w-4" />
@@ -1062,7 +1057,7 @@ export default function NewAgentPage() {
                 ) : (
                   <>
                     <Sparkles className="h-4 w-4" />
-                    Generate Agent ({CREDIT_COSTS.agentGeneration} credits)
+                    Generate Bot ({CREDIT_COSTS.agentGeneration} credits)
                   </>
                 )}
               </Button>
@@ -1071,7 +1066,7 @@ export default function NewAgentPage() {
             <div className="space-y-4">
               <Card>
                 <CardTitle className="flex items-center gap-2">
-                  <Brain className="h-5 w-5 text-purple-400" />
+                  <Zap className="h-5 w-5 text-emerald-400" />
                   {generated.name}
                 </CardTitle>
                 <CardDescription className="mt-1">
@@ -1079,6 +1074,20 @@ export default function NewAgentPage() {
                 </CardDescription>
 
                 <div className="mt-4 space-y-3">
+                  {(generated.config as Record<string, unknown>)?.rules ? (
+                    <div className="rounded-2xl border border-zinc-800/40 bg-zinc-900/30 p-4">
+                      <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                        Trading Rules
+                      </p>
+                      <RuleDisplay
+                        rules={
+                          (generated.config as Record<string, unknown>)
+                            .rules as Record<string, unknown>
+                        }
+                      />
+                    </div>
+                  ) : null}
+
                   <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
                       <p className="text-xs text-zinc-500">Exit Levels</p>
@@ -1107,10 +1116,10 @@ export default function NewAgentPage() {
                 </div>
               </Card>
 
-              <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-3">
-                <p className="text-xs text-purple-400">
-                  Agents use AI to analyze market conditions and make trading decisions.
-                  They run on a schedule and cannot be backtested. No real money is involved.
+              <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
+                <p className="text-xs text-amber-400">
+                  Bots are signal providers — they generate entry/exit signals
+                  and are tracked by gross return %. No real money is involved.
                 </p>
               </div>
 
@@ -1129,17 +1138,21 @@ export default function NewAgentPage() {
                 </Button>
                 <Button
                   className="flex-1"
-                  onClick={handleDeploy}
-                  loading={deploying}
+                  onClick={() => {
+                    resetBacktest();
+                    setStep("backtest");
+                  }}
                   size="lg"
                 >
-                  <Rocket className="h-4 w-4" />
-                  Deploy Agent
+                  <BarChart3 className="h-4 w-4" />
+                  Backtest & Deploy
+                  <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
             </div>
           )}
 
+          {/* Back navigation */}
           {!generated && (
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => setStep("exit")}>
@@ -1149,6 +1162,59 @@ export default function NewAgentPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* ================================================================== */}
+      {/* STEP 5: BACKTEST                                                    */}
+      {/* ================================================================== */}
+      {step === "backtest" && generated && (
+        <BacktestPanel
+          state={backtestState}
+          onRunBacktest={() => {
+            if (!generated) return;
+            const instrumentsArr = Array.from(selectedInstruments);
+            const config = generated.config as Record<string, unknown>;
+            const portfolio = config.portfolio as
+              | Record<string, unknown>
+              | undefined;
+            const configInstruments = (portfolio?.instruments ?? []) as Array<
+              Record<string, unknown>
+            >;
+
+            const backtestInstruments = instrumentsArr.map((id) => {
+              const match = configInstruments.find(
+                (ci) => ci.instrument === id
+              );
+              return {
+                instrument: id,
+                timeframe: (match?.timeframe as string) ?? "H1",
+              };
+            });
+
+            runBacktest({
+              config: generated.config,
+              instruments: backtestInstruments,
+              exit_config: {
+                stop_loss_pct: exitConfig.stop_loss_pct
+                  ? parseFloat(exitConfig.stop_loss_pct)
+                  : null,
+                take_profit_pct: exitConfig.take_profit_pct
+                  ? parseFloat(exitConfig.take_profit_pct)
+                  : null,
+              },
+              period_days: 365,
+            });
+          }}
+          onDeploy={async () => {
+            await handleDeployWithBacktest();
+          }}
+          onBack={() => setStep("review")}
+          onCancel={() => {
+            resetBacktest();
+            setStep("review");
+          }}
+          deployLoading={deploying}
+        />
       )}
     </div>
   );

@@ -15,7 +15,7 @@ interface AgentData {
   rank: number;
   name: string;
   creator: string;
-  strategy: "Systematic" | "Discretionary";
+  strategy: "Bot" | "Agent";
   roi: number;
   winRate: number;
   maxDrawdown: number;
@@ -28,7 +28,7 @@ const mockAgents: AgentData[] = [
     rank: 1,
     name: "AlphaScalper",
     creator: "@nakamoto",
-    strategy: "Systematic",
+    strategy: "Bot",
     roi: 42.8,
     winRate: 68,
     maxDrawdown: -4.2,
@@ -39,7 +39,7 @@ const mockAgents: AgentData[] = [
     rank: 2,
     name: "TrendRider Pro",
     creator: "@satoshi_fx",
-    strategy: "Discretionary",
+    strategy: "Agent",
     roi: 38.1,
     winRate: 72,
     maxDrawdown: -6.1,
@@ -50,7 +50,7 @@ const mockAgents: AgentData[] = [
     rank: 3,
     name: "MomentumBot v3",
     creator: "@quant_ella",
-    strategy: "Systematic",
+    strategy: "Bot",
     roi: 31.4,
     winRate: 65,
     maxDrawdown: -5.8,
@@ -61,7 +61,7 @@ const mockAgents: AgentData[] = [
     rank: 4,
     name: "GoldHunter AI",
     creator: "@midas_trade",
-    strategy: "Discretionary",
+    strategy: "Agent",
     roi: 28.7,
     winRate: 71,
     maxDrawdown: -3.9,
@@ -72,7 +72,7 @@ const mockAgents: AgentData[] = [
     rank: 5,
     name: "FX Reversion",
     creator: "@mean_rev",
-    strategy: "Systematic",
+    strategy: "Bot",
     roi: 24.3,
     winRate: 74,
     maxDrawdown: -2.8,
@@ -83,7 +83,7 @@ const mockAgents: AgentData[] = [
     rank: 6,
     name: "CryptoSentinel",
     creator: "@chain_sage",
-    strategy: "Discretionary",
+    strategy: "Agent",
     roi: 21.9,
     winRate: 62,
     maxDrawdown: -8.4,
@@ -94,7 +94,7 @@ const mockAgents: AgentData[] = [
     rank: 7,
     name: "Index Surfer",
     creator: "@wave_trader",
-    strategy: "Systematic",
+    strategy: "Bot",
     roi: 19.2,
     winRate: 66,
     maxDrawdown: -5.1,
@@ -105,7 +105,7 @@ const mockAgents: AgentData[] = [
     rank: 8,
     name: "NewsPulse AI",
     creator: "@newsbot_fx",
-    strategy: "Discretionary",
+    strategy: "Agent",
     roi: 17.6,
     winRate: 59,
     maxDrawdown: -7.2,
@@ -256,7 +256,7 @@ export function Arena() {
                     </td>
                     <td className="px-5 py-3.5">
                       <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
-                        agent.strategy === "Systematic"
+                        agent.strategy === "Bot"
                           ? "bg-cyan-500/10 text-cyan-400 ring-1 ring-cyan-500/20"
                           : "bg-purple-500/10 text-purple-400 ring-1 ring-purple-500/20"
                       }`}>

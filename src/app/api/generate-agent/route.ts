@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Check plan limits
-  const deployCheck = await canDeployAgent(user.id, agent_type ?? "systematic");
+  const deployCheck = await canDeployAgent(user.id, agent_type ?? "bot");
   if (!deployCheck.allowed) {
     return NextResponse.json(
       { error: deployCheck.reason },
@@ -60,8 +60,8 @@ export async function POST(request: NextRequest) {
 
   const systemPrompt = `You are Nexow's Agent Factory. Convert the user's structured trading strategy into a JSON config with dynamic trading rules.
 
-Agents are SIGNAL PROVIDERS — they emit entry signals (BUY/SELL) and exit signals (CLOSE).
-There is NO position sizing, no volume, no risk management. Agents are compared purely by gross return %.
+Bots and Agents are SIGNAL PROVIDERS — they emit entry signals (BUY/SELL) and exit signals (CLOSE).
+There is NO position sizing, no volume, no risk management. They are compared purely by gross return %.
 
 The user has already selected their instruments, entry strategy, and exit conditions. Your job is to translate their intent into a precise, executable config.
 
@@ -71,7 +71,7 @@ each instrument+timeframe combination in the portfolio config. If no specific ti
 
 Return a JSON object with these exact fields:
 {
-  "agent_type": "${agent_type || "systematic"}",
+  "agent_type": "${agent_type || "bot"}",
   "name": "Creative agent name",
   "description": "1-2 sentence description",
   "portfolio_summary": "e.g. EUR/USD on M15 + H4",
@@ -79,10 +79,10 @@ Return a JSON object with these exact fields:
 }
 
 ## User's selected instruments: ${instrumentsList}
-## Agent type: ${agent_type || "systematic"}
-${agent_type === "discretionary" && data_providers ? `## Data providers: ${data_providers.join(", ")}` : ""}
+## Agent type: ${agent_type || "bot"}
+${agent_type === "agent" && data_providers ? `## Data providers: ${data_providers.join(", ")}` : ""}
 
-## For SYSTEMATIC agents, config must contain "rules" with buy_rules and sell_rules:
+## For BOT agents, config must contain "rules" with buy_rules and sell_rules:
 
 Each rule group has "operator" ("and", "or", "not", "always", "never") and "conditions".
 Each condition has "type" and optional "params".
@@ -95,7 +95,7 @@ Available condition types:
 - Time: "every_candle" (DCA), "every_n_candles"
 - Meta: "has_no_open_trades", "has_open_trades"
 
-## Config structure for SYSTEMATIC:
+## Config structure for BOT:
 
 The portfolio instruments array MUST list every instrument+timeframe combination the agent needs data for.
 The engine builds a separate MarketSnapshot per timeframe, so conditions on different timeframes evaluate independently.
@@ -132,12 +132,12 @@ Example of CORRECT multi-timeframe rules:
 If only ONE timeframe is referenced, the "timeframe" param is optional (defaults to the primary TF).
 If the user does not mention any specific timeframe, default to H1 and omit the "timeframe" params.
 
-## For DISCRETIONARY agents, config includes: llm_provider, llm_model, personality, focus_areas, use_web_search, use_news_feed, evaluation_schedule, portfolio, exit
+## For AGENT type (LLM-powered), config includes: llm_provider, llm_model, personality, focus_areas, use_web_search, use_news_feed, evaluation_schedule, portfolio, exit
 
 Use the EXACT instruments the user selected. Determine timeframes from the entry/exit description.
 Use the exit values the user specified (stop_loss_pct, take_profit_pct, etc) — do NOT invent different values.
 
-IMPORTANT: Always generate both buy_rules AND sell_rules for systematic agents. Always include an "exit" object. Only use condition types from the Available list above — do NOT invent new types. Only return valid JSON.`;
+IMPORTANT: Always generate both buy_rules AND sell_rules for bot agents. Always include an "exit" object. Only use condition types from the Available list above — do NOT invent new types. Only return valid JSON.`;
 
   try {
     const resp = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -181,7 +181,7 @@ IMPORTANT: Always generate both buy_rules AND sell_rules for systematic agents. 
       p_amount: CREDIT_COSTS.agentGeneration,
       p_action: "agent_generation",
       p_agent_id: null,
-      p_description: `Generated ${agent_type ?? "systematic"} agent`,
+      p_description: `Generated ${agent_type ?? "bot"} config`,
     });
 
     return NextResponse.json(generated);

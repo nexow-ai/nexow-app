@@ -3,13 +3,14 @@
 import { cn } from "@/lib/utils";
 import {
   Bot,
+  Brain,
   Copy,
   CreditCard,
   LayoutDashboard,
   LogOut,
-  Plus,
   Sparkles,
   Trophy,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -18,8 +19,8 @@ import { Logo } from "./logo";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "My Agents", href: "/agents", icon: Bot },
-  { name: "Create Agent", href: "/agents/new", icon: Plus },
+  { name: "My Bots", href: "/bots", icon: Zap },
+  { name: "My Agents", href: "/agents", icon: Brain },
   { name: "Wall of Fame", href: "/leaderboard", icon: Trophy },
   { name: "Copy Trading", href: "/copy", icon: Copy },
   { name: "Pricing", href: "/pricing", icon: Sparkles },

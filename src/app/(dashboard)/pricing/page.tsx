@@ -195,8 +195,8 @@ export default function PricingPage() {
                     />
                     <Feature
                       icon={<Brain className="h-3.5 w-3.5" />}
-                      text="Discretionary (AI) agents"
-                      enabled={plan.limits.discretionaryAgents}
+                      text="AI Agents"
+                      enabled={plan.limits.aiAgents}
                     />
                     <Feature
                       icon={<CreditCard className="h-3.5 w-3.5" />}
@@ -284,13 +284,13 @@ export default function PricingPage() {
               </span>
             </div>
             <p className="text-2xl font-bold text-zinc-100">
-              {CREDIT_COSTS.discretionaryEvaluation}
+              {CREDIT_COSTS.agentEvaluation}
               <span className="ml-1 text-sm font-normal text-zinc-500">
                 credit/eval
               </span>
             </p>
             <p className="mt-1 text-xs text-zinc-500">
-              Each time a discretionary agent analyzes the market
+              Each time an AI agent analyzes the market
             </p>
           </div>
 
@@ -300,7 +300,7 @@ export default function PricingPage() {
                 <Zap className="h-4 w-4 text-blue-400" />
               </div>
               <span className="text-sm font-medium text-zinc-200">
-                Systematic Agents
+                Bots
               </span>
             </div>
             <p className="text-2xl font-bold text-zinc-100">
@@ -310,7 +310,7 @@ export default function PricingPage() {
               </span>
             </p>
             <p className="mt-1 text-xs text-zinc-500">
-              Rule-based agents run for free after creation
+              Rule-based bots run for free after creation
             </p>
           </div>
         </div>

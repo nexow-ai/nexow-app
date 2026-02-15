@@ -9,7 +9,7 @@ const features = [
     icon: Bot,
     title: "No-Code Agent Factory",
     description:
-      "Describe your strategy in plain English. Our AI converts it into a precise, executable trading agent — discretionary or systematic.",
+      "Describe your strategy in plain English. Our AI converts it into a precise, executable trading bot or AI agent.",
     gradient: "from-emerald-500/20 to-emerald-500/0",
     iconColor: "text-emerald-400",
     iconBg: "bg-emerald-500/10 border-emerald-500/20",
@@ -42,7 +42,7 @@ const features = [
     icon: Zap,
     title: "Dual-Brain Engine",
     description:
-      "Systematic agents for speed. Discretionary agents with LLM reasoning, news analysis, sentiment scoring, and web search.",
+      "Rule-based bots for speed and backtesting. AI agents with LLM reasoning, news analysis, sentiment scoring, and web search.",
     gradient: "from-purple-500/20 to-purple-500/0",
     iconColor: "text-purple-400",
     iconBg: "bg-purple-500/10 border-purple-500/20",

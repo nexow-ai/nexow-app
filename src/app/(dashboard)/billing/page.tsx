@@ -290,8 +290,8 @@ export default function BillingPage() {
           <FeatureItem
             icon={<Brain className="h-4 w-4" />}
             label="AI Agents"
-            value={plan.limits.discretionaryAgents ? "Yes" : "No"}
-            enabled={plan.limits.discretionaryAgents}
+            value={plan.limits.aiAgents ? "Yes" : "No"}
+            enabled={plan.limits.aiAgents}
           />
           <FeatureItem
             icon={<CreditCard className="h-4 w-4" />}
@@ -338,7 +338,7 @@ export default function BillingPage() {
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-800/80">
                     {entry.action === "agent_generation" ? (
                       <Sparkles className="h-4 w-4 text-emerald-400" />
-                    ) : entry.action === "discretionary_evaluation" ? (
+                    ) : entry.action === "agent_evaluation" ? (
                       <Brain className="h-4 w-4 text-purple-400" />
                     ) : (
                       <Zap className="h-4 w-4 text-blue-400" />

@@ -19,20 +19,20 @@ import { createClient } from "@/lib/supabase/client";
 import { useAgent } from "@/hooks/use-agents";
 import { useTrades } from "@/hooks/use-trades";
 import type { InstrumentConfig } from "@/lib/types/database";
-import { BarChart3, Brain, Loader2, Pause, Play, Radio, Trash2 } from "lucide-react";
+import { BarChart3, Loader2, Pause, Play, Radio, Trash2, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { use, useCallback, useEffect, useMemo, useState } from "react";
 
 type TradeView = "live" | "backtest";
 
-interface AgentDetailPageProps {
+interface BotDetailPageProps {
   params: Promise<{ id: string }>;
 }
 
-export default function AgentDetailPage({ params }: AgentDetailPageProps) {
+export default function BotDetailPage({ params }: BotDetailPageProps) {
   const { id } = use(params);
   const router = useRouter();
-  const { agent, loading: agentLoading, refetch } = useAgent(id);
+  const { agent: bot, loading: botLoading, refetch } = useAgent(id);
   const {
     trades,
     loading: tradesLoading,
@@ -40,37 +40,28 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
   } = useTrades(id);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // Trade view toggle: live vs backtest
   const [tradeView, setTradeView] = useState<TradeView>("live");
-
-  // Live prices per instrument (for accurate PnL on all open trades)
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
-
-  // Chart controlled state
   const [activeInstrument, setActiveInstrument] = useState<string>("");
   const [activeTimeframe, setActiveTimeframe] = useState<string>("");
 
-  // Initialize chart state from agent data
   useEffect(() => {
-    if (agent && !activeInstrument) {
-      setActiveInstrument(agent.instrument);
-      setActiveTimeframe(agent.timeframe);
+    if (bot && !activeInstrument) {
+      setActiveInstrument(bot.instrument);
+      setActiveTimeframe(bot.timeframe);
     }
-  }, [agent, activeInstrument]);
+  }, [bot, activeInstrument]);
 
-  // Derive instruments list from agent
-  const instruments: InstrumentConfig[] = agent
-    ? Array.isArray(agent.instruments) && agent.instruments.length > 0
-      ? agent.instruments
-      : [{ instrument: agent.instrument, timeframe: agent.timeframe }]
+  const instruments: InstrumentConfig[] = bot
+    ? Array.isArray(bot.instruments) && bot.instruments.length > 0
+      ? bot.instruments
+      : [{ instrument: bot.instrument, timeframe: bot.timeframe }]
     : [];
 
-  // Fetch live prices for all instruments that have open trades
   const fetchLivePrices = useCallback(async () => {
     const openTrades = trades.filter((t) => t.status === "open");
     if (openTrades.length === 0) return;
 
-    // Get unique instruments from open trades
     const openInstruments = [
       ...new Set(openTrades.map((t) => t.instrument)),
     ];
@@ -104,14 +95,14 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
   }, [fetchLivePrices, refetchTrades]);
 
   async function handleToggleStatus() {
-    if (!agent) return;
-    const newStatus = agent.status === "active" ? "paused" : "active";
+    if (!bot) return;
+    const newStatus = bot.status === "active" ? "paused" : "active";
     setActionLoading("toggle");
 
     const supabase = createClient();
     await (supabase.from as Function)("agents")
       .update({ status: newStatus })
-      .eq("id", agent.id);
+      .eq("id", bot.id);
 
     await refetch();
     setActionLoading(null);
@@ -119,22 +110,21 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
 
   async function handleDelete() {
     if (
-      !agent ||
+      !bot ||
       !confirm(
-        "Are you sure you want to delete this agent? This cannot be undone."
+        "Are you sure you want to delete this bot? This cannot be undone."
       )
     )
       return;
     setActionLoading("delete");
 
     const supabase = createClient();
-    await (supabase.from as Function)("agents").delete().eq("id", agent.id);
+    await (supabase.from as Function)("agents").delete().eq("id", bot.id);
 
-    const redirectPath = agent.type === "bot" ? "/bots" : "/agents";
-    router.push(redirectPath);
+    router.push("/bots");
   }
 
-  if (agentLoading) {
+  if (botLoading) {
     return (
       <div className="flex items-center justify-center py-32">
         <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
@@ -142,13 +132,12 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
     );
   }
 
-  if (!agent) {
+  if (!bot) {
     return (
-      <div className="py-32 text-center text-zinc-500">Agent not found.</div>
+      <div className="py-32 text-center text-zinc-500">Bot not found.</div>
     );
   }
 
-  // Split trades into live and backtest
   const liveTrades = useMemo(
     () => trades.filter((t) => !t.backtest_id),
     [trades]
@@ -159,7 +148,6 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
   );
   const hasBacktestData = backtestTrades.length > 0;
 
-  // Use filtered trades for current view
   const viewTrades = tradeView === "live" ? liveTrades : backtestTrades;
 
   const closedTrades = viewTrades.filter((t) => t.status === "closed");
@@ -177,29 +165,26 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
 
   return (
     <div className="space-y-6">
-      {/* Agent header */}
+      {/* Bot header */}
       <div className="relative overflow-hidden rounded-2xl border border-zinc-800/40 bg-zinc-900/30 p-6 backdrop-blur-sm">
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-cyan-500/5" />
         <div className="relative flex items-center justify-between">
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold tracking-tight text-white">
-                {agent.name}
+                {bot.name}
               </h1>
-              <AgentStatusBadge status={agent.status} />
+              <AgentStatusBadge status={bot.status} />
             </div>
-            {agent.description && (
+            {bot.description && (
               <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-                {agent.description}
+                {bot.description}
               </p>
             )}
             <div className="mt-3 flex items-center gap-2">
-              <Badge variant={agent.type === "bot" ? "info" : "warning"}>
-                {agent.type === "bot" ? (
-                  <><BarChart3 className="mr-1 h-3 w-3" />Bot</>
-                ) : (
-                  <><Brain className="mr-1 h-3 w-3" />Agent</>
-                )}
+              <Badge variant="info">
+                <Zap className="mr-1 h-3 w-3" />
+                Bot
               </Badge>
               <span className="text-xs text-zinc-600">
                 {instruments.map((i) => i.instrument.replace("_", "/")).join(", ")}
@@ -208,14 +193,14 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            {agent.status !== "killed" && (
+            {bot.status !== "killed" && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleToggleStatus}
                 loading={actionLoading === "toggle"}
               >
-                {agent.status === "active" ? (
+                {bot.status === "active" ? (
                   <>
                     <Pause className="h-4 w-4" />
                     Pause
@@ -305,7 +290,6 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
 
       {/* Chart workspace */}
       <div>
-        {/* Toolbar */}
         <ChartToolbar
           instruments={instruments}
           activeInstrument={activeInstrument}
@@ -314,23 +298,20 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
           onTimeframeChange={setActiveTimeframe}
         />
 
-        {/* Split view: Chart + Console */}
         <div className="flex gap-0" style={{ height: 520 }}>
-          {/* Chart */}
           <div className="min-w-0 flex-1 overflow-hidden rounded-bl-xl border-x border-b border-zinc-800/60 bg-zinc-900/20 p-4">
             {activeInstrument && activeTimeframe && (
               <TradingViewWidget
                 instrument={activeInstrument}
                 granularity={activeTimeframe}
-                agentId={agent.id}
+                agentId={bot.id}
                 height={460}
               />
             )}
           </div>
 
-          {/* Console */}
           <AgentConsole
-            agentId={agent.id}
+            agentId={bot.id}
             className="w-80 shrink-0 rounded-none rounded-br-xl border-b border-r border-zinc-800/60"
           />
         </div>
@@ -354,8 +335,8 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
           ) : viewTrades.length === 0 ? (
             <p className="py-8 text-center text-sm text-zinc-500">
               {tradeView === "backtest"
-                ? "No backtest data available for this agent."
-                : "No signals yet. Agent will start generating signals when market conditions match."}
+                ? "No backtest data available for this bot."
+                : "No signals yet. Bot will start generating signals when market conditions match."}
             </p>
           ) : (
             <Table>

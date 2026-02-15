@@ -3,11 +3,11 @@
 import { AgentCard } from "@/components/agents/agent-card";
 import { Button } from "@/components/ui/button";
 import { useAgents } from "@/hooks/use-agents";
-import { Bot, Loader2, Plus, Sparkles } from "lucide-react";
+import { Brain, Loader2, Plus } from "lucide-react";
 import Link from "next/link";
 
 export default function AgentsPage() {
-  const { agents, loading, error } = useAgents();
+  const { agents, loading, error } = useAgents("agent");
 
   return (
     <div className="space-y-8">
@@ -15,7 +15,7 @@ export default function AgentsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white">My Agents</h1>
           <p className="mt-1 text-sm text-zinc-500">
-            Manage your algorithmic trading agents.
+            AI-powered agents that analyze data and make trading decisions.
           </p>
         </div>
         <Link href="/agents/new">
@@ -40,13 +40,14 @@ export default function AgentsPage() {
 
       {!loading && !error && agents.length === 0 && (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-zinc-800/40 bg-zinc-900/20 py-20 text-center backdrop-blur-sm">
-          <div className="mb-5 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 p-5">
-            <Sparkles className="h-8 w-8 text-emerald-400" />
+          <div className="mb-5 rounded-2xl bg-gradient-to-br from-purple-500/10 to-cyan-500/10 p-5">
+            <Brain className="h-8 w-8 text-purple-400" />
           </div>
           <h3 className="text-lg font-semibold text-white">No agents yet</h3>
           <p className="mt-2 max-w-sm text-sm text-zinc-500">
-            Create your first trading agent using natural language. Describe your
-            strategy and the AI handles the rest.
+            Create your first AI agent. Configure data feeds and an LLM
+            provider, and your agent will analyze the market and trade on a
+            schedule.
           </p>
           <Link href="/agents/new" className="mt-8">
             <Button>
@@ -60,7 +61,7 @@ export default function AgentsPage() {
       {!loading && agents.length > 0 && (
         <div className="stagger-children grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {agents.map((agent) => (
-            <AgentCard key={agent.id} agent={agent} />
+            <AgentCard key={agent.id} agent={agent} linkPrefix="/agents" />
           ))}
         </div>
       )}

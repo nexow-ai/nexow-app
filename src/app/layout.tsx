@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Nexow — The Agentic Social Trading Platform",
   description:
-    "Build discretionary or systematic trading agents with plain English. Trade FX, Indices, Commodities, Stocks, and Crypto. Compete on The Arena and earn through blind social trading.",
+    "Build trading bots and AI agents with plain English. Trade FX, Indices, Commodities, Stocks, and Crypto. Compete on The Arena and earn through blind social trading.",
   icons: {
     icon: "/favicon.png",
   },

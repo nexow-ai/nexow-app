@@ -89,12 +89,12 @@ export default function DashboardPage() {
               </div>
               <p className="text-sm font-medium text-zinc-400">No signals yet</p>
               <p className="mt-1 max-w-xs text-xs text-zinc-600">
-                Create an agent and it will start generating trading signals automatically when market conditions align.
+                Create a bot or agent and it will start generating trading signals automatically when market conditions align.
               </p>
-              <Link href="/agents/new" className="mt-5">
+              <Link href="/bots/new" className="mt-5">
                 <Button size="sm">
                   <Plus className="h-3.5 w-3.5" />
-                  Create Agent
+                  Create Bot
                 </Button>
               </Link>
             </div>
@@ -107,7 +107,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="mt-2 space-y-3">
               {[
-                { title: "Create a Trading Agent", desc: "Build a new signal-generating agent from a prompt", href: "/agents/new", icon: Bot, color: "emerald" },
+                { title: "Create a Trading Bot", desc: "Build a rule-based bot from a prompt and backtest it", href: "/bots/new", icon: Bot, color: "emerald" },
                 { title: "View Leaderboard", desc: "See the top-performing agents by return %", href: "/leaderboard", icon: TrendingUp, color: "amber" },
                 { title: "Explore Copy Trading", desc: "Follow and copy top agents' signals", href: "/copy", icon: DollarSign, color: "cyan" },
               ].map((action) => (

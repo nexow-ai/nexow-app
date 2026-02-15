@@ -17,7 +17,7 @@ interface LeaderboardEntry {
   agent_name: string;
   creator: string;
   instrument: string;
-  type: "systematic" | "discretionary";
+  type: "bot" | "agent";
   roi_pct: number;
   win_rate: number;
   total_pnl: number;
@@ -74,8 +74,8 @@ export function LeaderboardTable({ entries }: LeaderboardTableProps) {
               </TableCell>
               <TableCell className="text-zinc-400">{entry.creator}</TableCell>
               <TableCell>
-                <Badge variant={entry.type === "systematic" ? "info" : "warning"}>
-                  {entry.type}
+                <Badge variant={entry.type === "bot" ? "info" : "warning"}>
+                  {entry.type === "bot" ? "Bot" : "Agent"}
                 </Badge>
               </TableCell>
               <TableCell>
