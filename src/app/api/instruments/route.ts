@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 
-const OANDA_API_URL =
-  process.env.OANDA_API_URL || "https://api-fxpractice.oanda.com";
-const OANDA_ACCOUNT_ID = process.env.OANDA_ACCOUNT_ID || "";
-const OANDA_API_TOKEN = process.env.OANDA_API_TOKEN || "";
+const NEXOW_SERVER_URL =
+  process.env.NEXOW_SERVER_URL || "http://localhost:8000";
 
 interface OandaTag {
   type: string;
@@ -205,26 +203,13 @@ let cachedResponse: { data: InstrumentGroup[]; timestamp: number } | null = null
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 export async function GET() {
-  if (!OANDA_ACCOUNT_ID || !OANDA_API_TOKEN) {
-    return NextResponse.json(
-      { error: "Oanda credentials not configured" },
-      { status: 500 }
-    );
-  }
-
   // Return cached if still fresh
   if (cachedResponse && Date.now() - cachedResponse.timestamp < CACHE_TTL_MS) {
     return NextResponse.json({ groups: cachedResponse.data });
   }
 
   try {
-    const url = `${OANDA_API_URL}/v3/accounts/${OANDA_ACCOUNT_ID}/instruments`;
-
-    const resp = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${OANDA_API_TOKEN}`,
-        "Content-Type": "application/json",
-      },
+    const resp = await fetch(`${NEXOW_SERVER_URL}/api/data/instruments`, {
       next: { revalidate: 3600 },
     });
 

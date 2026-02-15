@@ -1,13 +1,13 @@
 import { NextRequest } from "next/server";
 
-const ENGINE_API_URL =
-  process.env.ENGINE_API_URL || "http://localhost:8100";
+const NEXOW_SERVER_URL =
+  process.env.NEXOW_SERVER_URL || "http://localhost:8000";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const engineResponse = await fetch(`${ENGINE_API_URL}/backtest`, {
+    const engineResponse = await fetch(`${NEXOW_SERVER_URL}/api/backtest`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -21,7 +21,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Stream the SSE response from the engine back to the client
     const stream = new ReadableStream({
       async start(controller) {
         const reader = engineResponse.body?.getReader();
@@ -54,7 +53,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return new Response(
       JSON.stringify({
-        error: `Failed to connect to engine: ${error instanceof Error ? error.message : "Unknown error"}`,
+        error: `Failed to connect to server: ${error instanceof Error ? error.message : "Unknown error"}`,
       }),
       { status: 502, headers: { "Content-Type": "application/json" } }
     );
