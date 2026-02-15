@@ -65,17 +65,17 @@ export async function getUserSubscription(
  */
 export async function canDeployAgent(
   userId: string,
-  agentType: "systematic" | "discretionary"
+  agentType: "bot" | "agent"
 ): Promise<{ allowed: boolean; reason?: string }> {
   const supabase = await createClient();
   const subscription = await getUserSubscription(userId);
   const plan = getPlan(subscription.tier);
 
-  // Check if discretionary agents are allowed
-  if (agentType === "discretionary" && !plan.limits.discretionaryAgents) {
+  // Check if AI agents are allowed
+  if (agentType === "agent" && !plan.limits.aiAgents) {
     return {
       allowed: false,
-      reason: "Discretionary agents require a Starter plan or higher",
+      reason: "AI Agents require a Starter plan or higher",
     };
   }
 

@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 
 type Agent = Database["public"]["Tables"]["agents"]["Row"];
 
-export function useAgents() {
+export function useAgents(typeFilter?: "bot" | "agent") {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -22,11 +22,16 @@ export function useAgents() {
       return;
     }
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("agents")
       .select("*")
-      .eq("creator_id", user.id)
-      .order("created_at", { ascending: false });
+      .eq("creator_id", user.id);
+
+    if (typeFilter) {
+      query = query.eq("type", typeFilter);
+    }
+
+    const { data, error } = await query.order("created_at", { ascending: false });
 
     if (error) {
       setError(error.message);
@@ -34,7 +39,7 @@ export function useAgents() {
       setAgents(data ?? []);
     }
     setLoading(false);
-  }, []);
+  }, [typeFilter]);
 
   useEffect(() => {
     fetchAgents();

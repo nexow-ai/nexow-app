@@ -7,7 +7,7 @@ export interface AgentTemplate {
   id: string;
   name: string;
   description: string;
-  agent_type: "systematic" | "discretionary";
+  agent_type: "bot" | "agent";
   difficulty: "beginner" | "intermediate" | "advanced";
   tags: string[];
   prompt: string;
@@ -20,7 +20,7 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     name: "Conservative Gold RSI",
     description:
       "A cautious Gold trader that buys oversold dips and sells overbought peaks using RSI 14 on H1.",
-    agent_type: "systematic",
+    agent_type: "bot",
     difficulty: "beginner",
     tags: ["Gold", "RSI", "Conservative", "H1"],
     prompt: "Conservative Gold trader using RSI on H1",
@@ -52,7 +52,7 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     name: "EUR/USD MACD Scalper",
     description:
       "Fast M5 scalper on EUR/USD using MACD crossovers with tight exits.",
-    agent_type: "systematic",
+    agent_type: "bot",
     difficulty: "intermediate",
     tags: ["EUR/USD", "MACD", "Scalping", "M5"],
     prompt: "EUR/USD scalper using MACD crossovers on M5",
@@ -78,7 +78,7 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     name: "Forex Duo: EMA + Bollinger",
     description:
       "Trades EUR/USD and GBP/USD with EMA crossover confirmed by Bollinger Bands.",
-    agent_type: "systematic",
+    agent_type: "bot",
     difficulty: "intermediate",
     tags: ["Portfolio", "EMA", "Bollinger", "M15"],
     prompt:
@@ -113,10 +113,10 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     id: "news-trader-gold",
     name: "News-Aware Gold Trader",
     description:
-      "A discretionary agent that reads financial news and market analysis before deciding on Gold trades.",
-    agent_type: "discretionary",
+      "An AI agent that reads financial news and market analysis before deciding on Gold trades.",
+    agent_type: "agent",
     difficulty: "advanced",
-    tags: ["Gold", "News", "AI", "Discretionary"],
+    tags: ["Gold", "News", "AI", "Agent"],
     prompt:
       "Smart news-aware Gold trader that analyzes market sentiment before trading on H1",
     config: {
@@ -143,7 +143,7 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     name: "Multi-Asset RSI + MACD",
     description:
       "Diversified portfolio across 4 instruments with RSI + MACD confluence on H1.",
-    agent_type: "systematic",
+    agent_type: "bot",
     difficulty: "advanced",
     tags: ["Portfolio", "Diversified", "Confluence", "H1"],
     prompt:

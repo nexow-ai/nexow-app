@@ -46,7 +46,7 @@ export type Database = {
           creator_id: string;
           name: string;
           description: string | null;
-          type: "systematic" | "discretionary";
+          type: "bot" | "agent";
           config: Json;
           prompt: string | null;
           instrument: string;
@@ -63,7 +63,7 @@ export type Database = {
           creator_id: string;
           name: string;
           description?: string | null;
-          type?: "systematic" | "discretionary";
+          type?: "bot" | "agent";
           config?: Json;
           prompt?: string | null;
           instrument?: string;
@@ -77,7 +77,7 @@ export type Database = {
         Update: {
           name?: string;
           description?: string | null;
-          type?: "systematic" | "discretionary";
+          type?: "bot" | "agent";
           config?: Json;
           prompt?: string | null;
           instrument?: string;

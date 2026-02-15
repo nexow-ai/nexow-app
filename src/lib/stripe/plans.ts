@@ -4,7 +4,7 @@ export interface PlanLimits {
   maxAgents: number;
   monthlyCredits: number;
   maxConcurrentAgents: number;
-  discretionaryAgents: boolean;
+  aiAgents: boolean;
   copyTrading: boolean;
   priorityExecution: boolean;
 }
@@ -23,12 +23,12 @@ export interface Plan {
 
 /**
  * Credit costs for different operations.
- * Systematic agents only use credits during generation (one-time).
- * Discretionary agents use credits every evaluation cycle.
+ * Bots only use credits during generation (one-time).
+ * Agents use credits every evaluation cycle.
  */
 export const CREDIT_COSTS = {
   agentGeneration: 5,
-  discretionaryEvaluation: 1,
+  agentEvaluation: 1,
   agentRegeneration: 3,
 } as const;
 
@@ -45,7 +45,7 @@ export const PLANS: Plan[] = [
       maxAgents: 2,
       monthlyCredits: 100,
       maxConcurrentAgents: 1,
-      discretionaryAgents: false,
+      aiAgents: false,
       copyTrading: false,
       priorityExecution: false,
     },
@@ -62,7 +62,7 @@ export const PLANS: Plan[] = [
       maxAgents: 10,
       monthlyCredits: 1_000,
       maxConcurrentAgents: 5,
-      discretionaryAgents: true,
+      aiAgents: true,
       copyTrading: true,
       priorityExecution: false,
     },
@@ -80,7 +80,7 @@ export const PLANS: Plan[] = [
       maxAgents: 50,
       monthlyCredits: 5_000,
       maxConcurrentAgents: 20,
-      discretionaryAgents: true,
+      aiAgents: true,
       copyTrading: true,
       priorityExecution: true,
     },
@@ -97,7 +97,7 @@ export const PLANS: Plan[] = [
       maxAgents: -1,
       monthlyCredits: 25_000,
       maxConcurrentAgents: -1,
-      discretionaryAgents: true,
+      aiAgents: true,
       copyTrading: true,
       priorityExecution: true,
     },
