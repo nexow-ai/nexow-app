@@ -1,11 +1,13 @@
 "use client";
 
+import { useProfile } from "@/hooks/use-profile";
 import { useSubscription } from "@/hooks/use-subscription";
 import { formatCredits } from "@/lib/stripe/plans";
 import { Bell, Search, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 export function Header() {
+  const { displayName: username, loading: profileLoading } = useProfile();
   const { data: subscription, plan, loading } = useSubscription();
 
   return (
@@ -46,7 +48,7 @@ export function Header() {
           <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-emerald-400 via-cyan-400 to-purple-400 shadow-lg shadow-emerald-500/10" />
           <div className="hidden sm:block">
             <p className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 transition-colors">
-              Trader
+              {profileLoading ? "..." : username ?? "User"}
             </p>
             <p className="text-[11px] text-zinc-600">
               {loading ? "..." : `${plan.name} Plan`}
