@@ -60,7 +60,8 @@ interface BacktestRequestPayload {
   config: Record<string, unknown>;
   instruments: { instrument: string; timeframe: string }[];
   exit_config: { stop_loss_pct?: number | null; take_profit_pct?: number | null };
-  period_days?: number;
+  period_start: string;
+  period_end: string;
 }
 
 // ------------------------------------------------------------------

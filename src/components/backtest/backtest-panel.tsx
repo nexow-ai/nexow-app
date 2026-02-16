@@ -550,14 +550,21 @@ function EquityCurveChart({
         lineWidth: 2,
       });
 
-      const chartData = data
+      const sorted = data
         .map((d) => ({
           time: Math.floor(new Date(d.time).getTime() / 1000) as import("lightweight-charts").Time,
           value: d.equity,
         }))
         .sort((a, b) => (a.time as number) - (b.time as number));
 
-      areaSeries.setData(chartData);
+      // Deduplicate: lightweight-charts requires strictly ascending timestamps
+      const chartData = sorted.filter(
+        (d, i, arr) => i === arr.length - 1 || d.time !== arr[i + 1].time
+      );
+
+      if (chartData.length > 0) {
+        areaSeries.setData(chartData);
+      }
       chart.timeScale().fitContent();
 
       const resizeObserver = new ResizeObserver(() => {
@@ -669,10 +676,10 @@ function TradeTable({ trades }: { trades: BacktestTrade[] }) {
               <TableCell className="text-xs text-zinc-500">
                 {trade.entry_time && trade.exit_time
                   ? formatDuration(
-                      (new Date(trade.exit_time).getTime() -
-                        new Date(trade.entry_time).getTime()) /
-                        3600000
-                    )
+                    (new Date(trade.exit_time).getTime() -
+                      new Date(trade.entry_time).getTime()) /
+                    3600000
+                  )
                   : "\u2014"}
               </TableCell>
             </TableRow>
