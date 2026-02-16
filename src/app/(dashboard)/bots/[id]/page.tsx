@@ -21,7 +21,7 @@ import { useTrades } from "@/hooks/use-trades";
 import type { InstrumentConfig } from "@/lib/types/database";
 import { BarChart3, Loader2, Pause, Play, Radio, Trash2, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { use, useCallback, useEffect, useMemo, useState } from "react";
+import { use, useCallback, useEffect, useState } from "react";
 
 type TradeView = "live" | "backtest";
 
@@ -124,29 +124,9 @@ export default function BotDetailPage({ params }: BotDetailPageProps) {
     router.push("/bots");
   }
 
-  if (botLoading) {
-    return (
-      <div className="flex items-center justify-center py-32">
-        <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
-      </div>
-    );
-  }
-
-  if (!bot) {
-    return (
-      <div className="py-32 text-center text-zinc-500">Bot not found.</div>
-    );
-  }
-
-  const liveTrades = useMemo(
-    () => trades.filter((t) => !t.backtest_id),
-    [trades]
-  );
-  const backtestTrades = useMemo(
-    () => trades.filter((t) => !!t.backtest_id),
-    [trades]
-  );
-  const hasBacktestData = backtestTrades.length > 0;
+  const liveTrades = trades.filter((t) => !t.backtest_id);
+  const backtestTrades = trades.filter((t) => !!t.backtest_id);
+  const hasBacktestData: boolean = backtestTrades.length > 0;
 
   const viewTrades = tradeView === "live" ? liveTrades : backtestTrades;
 
@@ -162,6 +142,20 @@ export default function BotDetailPage({ params }: BotDetailPageProps) {
     closedTrades.length > 0
       ? (winningTrades.length / closedTrades.length) * 100
       : 0;
+
+  if (botLoading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
+      </div>
+    );
+  }
+
+  if (!bot) {
+    return (
+      <div className="py-32 text-center text-zinc-500">Bot not found.</div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -227,32 +221,13 @@ export default function BotDetailPage({ params }: BotDetailPageProps) {
       </div>
 
       {/* Live / Backtest toggle */}
-      {hasBacktestData && (
-        <div className="flex items-center gap-1 rounded-xl border border-zinc-800/60 bg-zinc-900/30 p-1 w-fit">
-          <button
-            onClick={() => setTradeView("live")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-              tradeView === "live"
-                ? "bg-emerald-500/15 text-emerald-400"
-                : "text-zinc-500 hover:text-zinc-300"
-            }`}
-          >
-            <Radio className="h-3 w-3" />
-            Live ({liveTrades.length})
-          </button>
-          <button
-            onClick={() => setTradeView("backtest")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-              tradeView === "backtest"
-                ? "bg-purple-500/15 text-purple-400"
-                : "text-zinc-500 hover:text-zinc-300"
-            }`}
-          >
-            <BarChart3 className="h-3 w-3" />
-            Backtest ({backtestTrades.length})
-          </button>
-        </div>
-      )}
+      <TradeViewToggle
+        show={hasBacktestData}
+        tradeView={tradeView}
+        liveTrades={liveTrades}
+        backtestTrades={backtestTrades}
+        onSetTradeView={setTradeView}
+      />
 
       {/* Performance stats */}
       <div className="stagger-children grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
@@ -289,7 +264,7 @@ export default function BotDetailPage({ params }: BotDetailPageProps) {
       </div>
 
       {/* Strategy code */}
-      {(bot.config as Record<string, unknown>)?.strategy_code && (
+      {!!(bot.config as Record<string, unknown>)?.strategy_code && (
         <Card>
           <CardTitle className="flex items-center gap-2 text-sm">
             <Zap className="h-4 w-4 text-emerald-400" />
@@ -395,7 +370,7 @@ export default function BotDetailPage({ params }: BotDetailPageProps) {
                     </TableCell>
                     <TableCell>
                       {trade.status === "closed" &&
-                      trade.return_pct != null ? (
+                        trade.return_pct != null ? (
                         <span
                           className={
                             trade.return_pct >= 0
@@ -436,7 +411,7 @@ export default function BotDetailPage({ params }: BotDetailPageProps) {
                     </TableCell>
                     <TableCell className="text-xs text-zinc-500">
                       {trade.stop_loss_pct != null ||
-                      trade.take_profit_pct != null ? (
+                        trade.take_profit_pct != null ? (
                         <>
                           {trade.stop_loss_pct != null && (
                             <span className="text-red-400/70">
@@ -472,6 +447,42 @@ export default function BotDetailPage({ params }: BotDetailPageProps) {
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+interface TradeViewToggleProps {
+  show: boolean;
+  tradeView: TradeView;
+  liveTrades: { backtest_id: string | null }[];
+  backtestTrades: { backtest_id: string | null }[];
+  onSetTradeView: (view: TradeView) => void;
+}
+
+function TradeViewToggle({ show, tradeView, liveTrades, backtestTrades, onSetTradeView }: TradeViewToggleProps) {
+  if (!show) return null;
+  return (
+    <div className="flex items-center gap-1 rounded-xl border border-zinc-800/60 bg-zinc-900/30 p-1 w-fit">
+      <button
+        onClick={() => onSetTradeView("live")}
+        className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${tradeView === "live"
+          ? "bg-emerald-500/15 text-emerald-400"
+          : "text-zinc-500 hover:text-zinc-300"
+          }`}
+      >
+        <Radio className="h-3 w-3" />
+        {`Live (${liveTrades.length})`}
+      </button>
+      <button
+        onClick={() => onSetTradeView("backtest")}
+        className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${tradeView === "backtest"
+          ? "bg-purple-500/15 text-purple-400"
+          : "text-zinc-500 hover:text-zinc-300"
+          }`}
+      >
+        <BarChart3 className="h-3 w-3" />
+        {`Backtest (${backtestTrades.length})`}
+      </button>
     </div>
   );
 }

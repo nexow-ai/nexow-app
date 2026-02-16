@@ -476,20 +476,18 @@ export default function NewBotPage() {
                 if (i < stepIndex) setStep(s.key);
               }}
               disabled={i > stepIndex}
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-colors ${
-                step === s.key
+              className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-colors ${step === s.key
                   ? "bg-emerald-600 text-white"
                   : i < stepIndex
                     ? "bg-emerald-900/50 text-emerald-400 hover:bg-emerald-900/70 cursor-pointer"
                     : "bg-zinc-800 text-zinc-500"
-              }`}
+                }`}
             >
               {i < stepIndex ? <Check className="h-4 w-4" /> : i + 1}
             </button>
             <span
-              className={`hidden text-xs font-medium sm:inline ${
-                step === s.key ? "text-zinc-200" : "text-zinc-500"
-              }`}
+              className={`hidden text-xs font-medium sm:inline ${step === s.key ? "text-zinc-200" : "text-zinc-500"
+                }`}
             >
               {s.label}
             </span>
@@ -613,18 +611,16 @@ export default function NewBotPage() {
                             <button
                               key={inst.id}
                               onClick={() => toggleInstrument(inst.id)}
-                              className={`group flex items-center gap-2 rounded-lg px-3 py-2 text-left transition-all ${
-                                isSelected
+                              className={`group flex items-center gap-2 rounded-lg px-3 py-2 text-left transition-all ${isSelected
                                   ? "border border-emerald-500/40 bg-emerald-500/10"
                                   : "border border-transparent hover:border-zinc-700/60 hover:bg-zinc-800/40"
-                              }`}
+                                }`}
                             >
                               <div
-                                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
-                                  isSelected
+                                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${isSelected
                                     ? "border-emerald-500 bg-emerald-500"
                                     : "border-zinc-600 group-hover:border-zinc-500"
-                                }`}
+                                  }`}
                               >
                                 {isSelected && (
                                   <Check className="h-2.5 w-2.5 text-white" />
@@ -1198,7 +1194,8 @@ export default function NewBotPage() {
                   ? parseFloat(exitConfig.take_profit_pct)
                   : null,
               },
-              period_days: 365,
+              period_start: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
+              period_end: new Date().toISOString(),
             });
           }}
           onDeploy={async () => {
