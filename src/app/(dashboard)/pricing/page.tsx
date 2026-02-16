@@ -22,9 +22,17 @@ import {
   Zap,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
 export default function PricingPage() {
+  return (
+    <Suspense>
+      <PricingContent />
+    </Suspense>
+  );
+}
+
+function PricingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const canceled = searchParams.get("canceled") === "true";

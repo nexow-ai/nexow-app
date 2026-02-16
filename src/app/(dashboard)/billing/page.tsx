@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 interface UsageLogEntry {
   id: string;
@@ -33,6 +33,14 @@ interface UsageLogEntry {
 }
 
 export default function BillingPage() {
+  return (
+    <Suspense>
+      <BillingContent />
+    </Suspense>
+  );
+}
+
+function BillingContent() {
   const searchParams = useSearchParams();
   const success = searchParams.get("success") === "true";
 
