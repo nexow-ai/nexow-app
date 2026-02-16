@@ -16,5 +16,11 @@
       "binding": "WORKER_SELF_REFERENCE",
       "service": "nexow-app"
     }
+  ],
+  "routes": [
+    {
+      "pattern": "nexow.ai",
+      "custom_domain": true
+    }
   ]
 }
