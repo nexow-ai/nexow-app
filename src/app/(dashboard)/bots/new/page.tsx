@@ -1117,7 +1117,7 @@ export default function NewBotPage() {
 
               {error && <p className="text-sm text-red-400">{error}</p>}
 
-              <div className="flex gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row">
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -1129,7 +1129,7 @@ export default function NewBotPage() {
                   Regenerate
                 </Button>
                 <Button
-                  className="flex-1"
+                  variant="outline"
                   onClick={() => {
                     resetBacktest();
                     setStep("backtest");
@@ -1137,7 +1137,17 @@ export default function NewBotPage() {
                   size="lg"
                 >
                   <BarChart3 className="h-4 w-4" />
-                  Backtest & Deploy
+                  Backtest
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={() => handleDeployWithBacktest()}
+                  loading={deploying}
+                  disabled={deploying}
+                  size="lg"
+                >
+                  <Rocket className="h-4 w-4" />
+                  Deploy
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
