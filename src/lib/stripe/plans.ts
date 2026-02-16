@@ -26,12 +26,38 @@ export interface Plan {
  * Credit costs for different operations.
  * Bots only use credits during generation (one-time).
  * Agents use credits every evaluation cycle.
+ * Lab messages cost varies by model tier.
  */
 export const CREDIT_COSTS = {
   agentGeneration: 5,
   agentEvaluation: 1,
   agentRegeneration: 3,
 } as const;
+
+/**
+ * Credit cost per Lab message by model ID.
+ * Cheaper/faster models cost less; premium/reasoning models cost more.
+ */
+export const LAB_MODEL_CREDITS: Record<string, number> = {
+  // OpenAI
+  "gpt-4.1-nano": 1,
+  "gpt-4.1-mini": 2,
+  "gpt-4.1": 5,
+  "o3-mini": 8,
+  // Anthropic
+  "claude-3-5-haiku-20241022": 2,
+  "claude-sonnet-4-20250514": 5,
+  // Google
+  "gemini-2.0-flash": 1,
+  "gemini-2.5-flash": 2,
+  "gemini-2.5-pro": 5,
+  // DeepSeek
+  "deepseek-chat": 1,
+  "deepseek-reasoner": 3,
+} as const;
+
+/** Default credit cost for unknown models. */
+export const LAB_DEFAULT_CREDITS = 3;
 
 export const PLANS: Plan[] = [
   {
