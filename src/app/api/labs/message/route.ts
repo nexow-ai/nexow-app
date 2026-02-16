@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
         LAB_MODEL_CREDITS[model as string] ?? LAB_DEFAULT_CREDITS;
 
     // Consume credits (checks balance atomically and deducts)
-    const { data: consumed, error: creditError } = await supabase.rpc(
+    const { data: consumed, error: creditError } = await (supabase.rpc as Function)(
         "consume_credits",
         {
             p_user_id: user.id,
