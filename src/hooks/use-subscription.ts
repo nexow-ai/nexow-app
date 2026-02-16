@@ -12,6 +12,8 @@ export interface SubscriptionData {
   creditsRemaining: number;
   cancelAtPeriodEnd: boolean;
   currentPeriodEnd: string | null;
+  botCount: number;
+  activeBotCount: number;
   agentCount: number;
   activeAgentCount: number;
 }
@@ -40,29 +42,47 @@ export function useSubscription() {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      const from = supabase.from as Function;
+      const from = (supabase.from as Function).bind(supabase);
 
-      const [subResult, creditsResult, agentResult, activeResult] =
-        await Promise.all([
-          from("subscriptions")
-            .select(
-              "tier, status, cancel_at_period_end, current_period_end"
-            )
-            .eq("user_id", user.id)
-            .single(),
-          from("ai_credits")
-            .select("credits_limit, credits_used")
-            .eq("user_id", user.id)
-            .single(),
-          from("agents")
-            .select("id", { count: "exact", head: true })
-            .eq("creator_id", user.id)
-            .neq("status", "killed"),
-          from("agents")
-            .select("id", { count: "exact", head: true })
-            .eq("creator_id", user.id)
-            .eq("status", "active"),
-        ]);
+      const [
+        subResult,
+        creditsResult,
+        botResult,
+        activeBotResult,
+        agentResult,
+        activeAgentResult,
+      ] = await Promise.all([
+        from("subscriptions")
+          .select(
+            "tier, status, cancel_at_period_end, current_period_end"
+          )
+          .eq("user_id", user.id)
+          .single(),
+        from("ai_credits")
+          .select("credits_limit, credits_used")
+          .eq("user_id", user.id)
+          .single(),
+        from("agents")
+          .select("id", { count: "exact", head: true })
+          .eq("creator_id", user.id)
+          .eq("type", "bot")
+          .neq("status", "killed"),
+        from("agents")
+          .select("id", { count: "exact", head: true })
+          .eq("creator_id", user.id)
+          .eq("type", "bot")
+          .eq("status", "active"),
+        from("agents")
+          .select("id", { count: "exact", head: true })
+          .eq("creator_id", user.id)
+          .eq("type", "agent")
+          .neq("status", "killed"),
+        from("agents")
+          .select("id", { count: "exact", head: true })
+          .eq("creator_id", user.id)
+          .eq("type", "agent")
+          .eq("status", "active"),
+      ]);
 
       const sub = subResult.data as SubRow | null;
       const credits = creditsResult.data as CreditRow | null;
@@ -79,8 +99,10 @@ export function useSubscription() {
         creditsRemaining: Math.max(0, creditsLimit - creditsUsed),
         cancelAtPeriodEnd: sub?.cancel_at_period_end ?? false,
         currentPeriodEnd: sub?.current_period_end ?? null,
+        botCount: botResult.count ?? 0,
+        activeBotCount: activeBotResult.count ?? 0,
         agentCount: agentResult.count ?? 0,
-        activeAgentCount: activeResult.count ?? 0,
+        activeAgentCount: activeAgentResult.count ?? 0,
       });
     } catch (err) {
       console.error("Failed to fetch subscription:", err);

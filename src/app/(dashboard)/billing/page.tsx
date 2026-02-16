@@ -93,6 +93,13 @@ export default function BillingPage() {
         )
       : 0;
 
+  const botPercent =
+    plan.limits.maxBots > 0
+      ? Math.round(
+          (subscription.botCount / plan.limits.maxBots) * 100
+        )
+      : 0;
+
   const agentPercent =
     plan.limits.maxAgents > 0
       ? Math.round(
@@ -135,7 +142,7 @@ export default function BillingPage() {
       </div>
 
       {/* Current plan overview */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Plan card */}
         <Card className="!p-5">
           <div className="mb-3 flex items-center justify-between">
@@ -186,11 +193,11 @@ export default function BillingPage() {
           )}
         </Card>
 
-        {/* AI Credits card */}
+        {/* Credits card */}
         <Card className="!p-5">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              AI Credits
+              Credits
             </span>
             <Sparkles className="h-4 w-4 text-purple-400" />
           </div>
@@ -218,13 +225,54 @@ export default function BillingPage() {
           </p>
         </Card>
 
-        {/* Agent usage card */}
+        {/* Bots usage card */}
+        <Card className="!p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+              Bots
+            </span>
+            <Bot className="h-4 w-4 text-emerald-400" />
+          </div>
+          <p className="text-2xl font-bold text-zinc-100">
+            {subscription.botCount}
+            <span className="text-sm font-normal text-zinc-500">
+              {" "}
+              /{" "}
+              {isUnlimited(plan.limits.maxBots) ? (
+                <span className="text-emerald-400">unlimited</span>
+              ) : (
+                plan.limits.maxBots
+              )}
+            </span>
+          </p>
+          {!isUnlimited(plan.limits.maxBots) && (
+            <>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-zinc-800">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    botPercent > 90
+                      ? "bg-red-500"
+                      : botPercent > 70
+                        ? "bg-amber-500"
+                        : "bg-emerald-500"
+                  }`}
+                  style={{ width: `${Math.min(botPercent, 100)}%` }}
+                />
+              </div>
+              <p className="mt-1.5 text-xs text-zinc-600">
+                {subscription.activeBotCount} currently active
+              </p>
+            </>
+          )}
+        </Card>
+
+        {/* Agents usage card */}
         <Card className="!p-5">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
               Agents
             </span>
-            <Bot className="h-4 w-4 text-emerald-400" />
+            <Brain className="h-4 w-4 text-purple-400" />
           </div>
           <p className="text-2xl font-bold text-zinc-100">
             {subscription.agentCount}
@@ -232,13 +280,13 @@ export default function BillingPage() {
               {" "}
               /{" "}
               {isUnlimited(plan.limits.maxAgents) ? (
-                <span className="text-emerald-400">unlimited</span>
+                <span className="text-purple-400">unlimited</span>
               ) : (
                 plan.limits.maxAgents
               )}
             </span>
           </p>
-          {!isUnlimited(plan.limits.maxAgents) && (
+          {!isUnlimited(plan.limits.maxAgents) && plan.limits.aiAgents && (
             <>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-zinc-800">
                 <div
@@ -247,7 +295,7 @@ export default function BillingPage() {
                       ? "bg-red-500"
                       : agentPercent > 70
                         ? "bg-amber-500"
-                        : "bg-emerald-500"
+                        : "bg-purple-500"
                   }`}
                   style={{ width: `${Math.min(agentPercent, 100)}%` }}
                 />
@@ -256,6 +304,11 @@ export default function BillingPage() {
                 {subscription.activeAgentCount} currently active
               </p>
             </>
+          )}
+          {!plan.limits.aiAgents && (
+            <p className="mt-2 text-xs text-zinc-600">
+              Upgrade to Starter to unlock
+            </p>
           )}
         </Card>
       </div>
@@ -266,12 +319,24 @@ export default function BillingPage() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <FeatureItem
             icon={<Bot className="h-4 w-4" />}
+            label="Max Bots"
+            value={
+              isUnlimited(plan.limits.maxBots)
+                ? "Unlimited"
+                : plan.limits.maxBots.toString()
+            }
+          />
+          <FeatureItem
+            icon={<Brain className="h-4 w-4" />}
             label="Max Agents"
             value={
-              isUnlimited(plan.limits.maxAgents)
-                ? "Unlimited"
-                : plan.limits.maxAgents.toString()
+              !plan.limits.aiAgents
+                ? "—"
+                : isUnlimited(plan.limits.maxAgents)
+                  ? "Unlimited"
+                  : plan.limits.maxAgents.toString()
             }
+            enabled={plan.limits.aiAgents}
           />
           <FeatureItem
             icon={<Zap className="h-4 w-4" />}
@@ -286,12 +351,6 @@ export default function BillingPage() {
             icon={<Sparkles className="h-4 w-4" />}
             label="Monthly Credits"
             value={formatCredits(plan.limits.monthlyCredits)}
-          />
-          <FeatureItem
-            icon={<Brain className="h-4 w-4" />}
-            label="AI Agents"
-            value={plan.limits.aiAgents ? "Yes" : "No"}
-            enabled={plan.limits.aiAgents}
           />
           <FeatureItem
             icon={<CreditCard className="h-4 w-4" />}

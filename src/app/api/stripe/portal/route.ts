@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const from = supabase.from as Function;
+    const from = (supabase.from as Function).bind(supabase);
     const { data: subscription } = await from("subscriptions")
       .select("stripe_customer_id")
       .eq("user_id", user.id)

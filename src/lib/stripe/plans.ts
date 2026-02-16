@@ -1,6 +1,7 @@
 export type PlanId = "free" | "starter" | "pro" | "elite";
 
 export interface PlanLimits {
+  maxBots: number;
   maxAgents: number;
   monthlyCredits: number;
   maxConcurrentAgents: number;
@@ -42,7 +43,8 @@ export const PLANS: Plan[] = [
     stripePriceIdMonthly: "",
     stripePriceIdYearly: "",
     limits: {
-      maxAgents: 2,
+      maxBots: 2,
+      maxAgents: 0,
       monthlyCredits: 100,
       maxConcurrentAgents: 1,
       aiAgents: false,
@@ -59,7 +61,8 @@ export const PLANS: Plan[] = [
     stripePriceIdMonthly: process.env.NEXT_PUBLIC_STRIPE_STARTER_MONTHLY_PRICE_ID ?? "",
     stripePriceIdYearly: process.env.NEXT_PUBLIC_STRIPE_STARTER_YEARLY_PRICE_ID ?? "",
     limits: {
-      maxAgents: 10,
+      maxBots: 10,
+      maxAgents: 3,
       monthlyCredits: 1_000,
       maxConcurrentAgents: 5,
       aiAgents: true,
@@ -77,7 +80,8 @@ export const PLANS: Plan[] = [
     stripePriceIdYearly: process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID ?? "",
     popular: true,
     limits: {
-      maxAgents: 50,
+      maxBots: 50,
+      maxAgents: 15,
       monthlyCredits: 5_000,
       maxConcurrentAgents: 20,
       aiAgents: true,
@@ -94,6 +98,7 @@ export const PLANS: Plan[] = [
     stripePriceIdMonthly: process.env.NEXT_PUBLIC_STRIPE_ELITE_MONTHLY_PRICE_ID ?? "",
     stripePriceIdYearly: process.env.NEXT_PUBLIC_STRIPE_ELITE_YEARLY_PRICE_ID ?? "",
     limits: {
+      maxBots: -1,
       maxAgents: -1,
       monthlyCredits: 25_000,
       maxConcurrentAgents: -1,

@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     }
 
     const stripe = getStripe();
-    const from = supabase.from as Function;
+    const from = (supabase.from as Function).bind(supabase);
 
     // Check if user already has a Stripe customer ID
     const { data: subscription } = await from("subscriptions")

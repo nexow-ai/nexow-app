@@ -176,27 +176,33 @@ export default function PricingPage() {
                     <Feature
                       icon={<Bot className="h-3.5 w-3.5" />}
                       text={
-                        isUnlimited(plan.limits.maxAgents)
-                          ? "Unlimited agents"
-                          : `Up to ${plan.limits.maxAgents} agents`
+                        isUnlimited(plan.limits.maxBots)
+                          ? "Unlimited bots"
+                          : `Up to ${plan.limits.maxBots} bots`
                       }
+                    />
+                    <Feature
+                      icon={<Brain className="h-3.5 w-3.5" />}
+                      text={
+                        !plan.limits.aiAgents
+                          ? "Agents"
+                          : isUnlimited(plan.limits.maxAgents)
+                            ? "Unlimited agents"
+                            : `Up to ${plan.limits.maxAgents} agents`
+                      }
+                      enabled={plan.limits.aiAgents}
                     />
                     <Feature
                       icon={<Zap className="h-3.5 w-3.5" />}
                       text={
                         isUnlimited(plan.limits.maxConcurrentAgents)
-                          ? "Unlimited concurrent agents"
+                          ? "Unlimited concurrent active"
                           : `${plan.limits.maxConcurrentAgents} concurrent active`
                       }
                     />
                     <Feature
                       icon={<Sparkles className="h-3.5 w-3.5" />}
-                      text={`${formatCredits(plan.limits.monthlyCredits)} AI credits/month`}
-                    />
-                    <Feature
-                      icon={<Brain className="h-3.5 w-3.5" />}
-                      text="AI Agents"
-                      enabled={plan.limits.aiAgents}
+                      text={`${formatCredits(plan.limits.monthlyCredits)} credits/month`}
                     />
                     <Feature
                       icon={<CreditCard className="h-3.5 w-3.5" />}
@@ -251,7 +257,7 @@ export default function PricingPage() {
       {/* Credit costs explanation */}
       <Card className="!p-6">
         <h3 className="mb-4 text-sm font-semibold text-zinc-200">
-          How AI Credits Work
+          How Credits Work
         </h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="rounded-xl border border-zinc-800/60 bg-zinc-900/50 p-4">
@@ -290,7 +296,7 @@ export default function PricingPage() {
               </span>
             </p>
             <p className="mt-1 text-xs text-zinc-500">
-              Each time an AI agent analyzes the market
+              Each time an agent analyzes the market
             </p>
           </div>
 

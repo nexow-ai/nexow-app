@@ -71,30 +71,32 @@ export async function canDeployAgent(
   const subscription = await getUserSubscription(userId);
   const plan = getPlan(subscription.tier);
 
-  // Check if AI agents are allowed
   if (agentType === "agent" && !plan.limits.aiAgents) {
     return {
       allowed: false,
-      reason: "AI Agents require a Starter plan or higher",
+      reason: "Agents require a Starter plan or higher",
     };
   }
 
-  // Check agent count limit
-  if (plan.limits.maxAgents !== -1) {
+  const maxLimit =
+    agentType === "bot" ? plan.limits.maxBots : plan.limits.maxAgents;
+  const label = agentType === "bot" ? "bots" : "agents";
+
+  if (maxLimit !== -1) {
     const { count } = await (supabase.from as Function)("agents")
       .select("id", { count: "exact", head: true })
       .eq("creator_id", userId)
+      .eq("type", agentType)
       .neq("status", "killed");
 
-    if ((count ?? 0) >= plan.limits.maxAgents) {
+    if ((count ?? 0) >= maxLimit) {
       return {
         allowed: false,
-        reason: `You've reached the maximum of ${plan.limits.maxAgents} agents on the ${plan.name} plan`,
+        reason: `You've reached the maximum of ${maxLimit} ${label} on the ${plan.name} plan`,
       };
     }
   }
 
-  // Check concurrent active agents
   if (plan.limits.maxConcurrentAgents !== -1) {
     const { count } = await (supabase.from as Function)("agents")
       .select("id", { count: "exact", head: true })
@@ -104,7 +106,7 @@ export async function canDeployAgent(
     if ((count ?? 0) >= plan.limits.maxConcurrentAgents) {
       return {
         allowed: false,
-        reason: `You've reached the maximum of ${plan.limits.maxConcurrentAgents} active agents on the ${plan.name} plan`,
+        reason: `You've reached the maximum of ${plan.limits.maxConcurrentAgents} concurrent active ${label} on the ${plan.name} plan`,
       };
     }
   }
