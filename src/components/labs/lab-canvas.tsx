@@ -192,41 +192,9 @@ export function LabCanvas({
                                     </Card>
                                 )}
 
-                            {/* Live backtest progress */}
+                            {/* Single BacktestPanel instance for all phases */}
                             {backtestState &&
-                                backtestState.phase !== "idle" &&
-                                backtestState.phase !== "complete" &&
-                                backtestState.phase !== "error" && (
-                                    <div className="animate-fade-in">
-                                        <BacktestPanel
-                                            state={backtestState}
-                                            onRunBacktest={onRunBacktest}
-                                            onDeploy={onDeploy}
-                                            onBack={() => {}}
-                                            onCancel={() => {}}
-                                            deployLoading={deployLoading}
-                                        />
-                                    </div>
-                                )}
-
-                            {/* Backtest results */}
-                            {backtestState?.phase === "complete" &&
-                                backtestState.result && (
-                                    <div className="animate-slide-up">
-                                        <BacktestPanel
-                                            state={backtestState}
-                                            onRunBacktest={onRunBacktest}
-                                            onDeploy={onDeploy}
-                                            onBack={() => {}}
-                                            onCancel={() => {}}
-                                            deployLoading={deployLoading}
-                                        />
-                                    </div>
-                                )}
-
-                            {/* Backtest error */}
-                            {backtestState?.phase === "error" && (
-                                <div className="animate-slide-down">
+                                backtestState.phase !== "idle" && (
                                     <BacktestPanel
                                         state={backtestState}
                                         onRunBacktest={onRunBacktest}
@@ -235,8 +203,7 @@ export function LabCanvas({
                                         onCancel={() => {}}
                                         deployLoading={deployLoading}
                                     />
-                                </div>
-                            )}
+                                )}
                         </div>
                     )}
 
