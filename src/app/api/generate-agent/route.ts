@@ -17,14 +17,13 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { prompt, agent_type } = body;
+  const { prompt } = body;
 
   if (!prompt || typeof prompt !== "string") {
     return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
   }
 
-  // Check plan limits
-  const deployCheck = await canDeployAgent(user.id, agent_type ?? "bot");
+  const deployCheck = await canDeployAgent(user.id, "agent");
   if (!deployCheck.allowed) {
     return NextResponse.json(
       { error: deployCheck.reason },
@@ -32,17 +31,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Check credits
   const hasCreds = await hasCredits(user.id, CREDIT_COSTS.agentGeneration);
   if (!hasCreds) {
     return NextResponse.json(
-      { error: "Insufficient AI credits. Upgrade your plan for more credits." },
+      { error: "Insufficient credits. Upgrade your plan for more credits." },
       { status: 403 }
     );
   }
 
   try {
-    // Proxy generation to nexow-server
     const resp = await fetch(`${NEXOW_SERVER_URL}/api/agents/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -56,13 +53,12 @@ export async function POST(request: NextRequest) {
 
     const generated = await resp.json();
 
-    // Consume credits after successful generation
     await (supabase.rpc as Function)("consume_credits", {
       p_user_id: user.id,
       p_amount: CREDIT_COSTS.agentGeneration,
       p_action: "agent_generation",
       p_agent_id: null,
-      p_description: `Generated ${agent_type ?? "bot"} config`,
+      p_description: "Generated agent config",
     });
 
     return NextResponse.json(generated);

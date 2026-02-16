@@ -276,11 +276,6 @@ export default function NewAgentPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: buildPrompt(),
-          instruments: Array.from(selectedInstruments),
-          agent_type: "agent",
-          entry_description: entryDescription,
-          data_providers: Array.from(dataProviders),
-          exit_config: exitConfig,
         }),
       });
 
@@ -391,7 +386,7 @@ export default function NewAgentPage() {
           <div className="flex items-center gap-2">
             <Lock className="h-4 w-4 text-amber-400" />
             <p className="text-sm font-medium text-amber-400">
-              AI Agents require a Starter plan or higher.{" "}
+              Agents require a Starter plan or higher.{" "}
               <Link href="/pricing" className="underline hover:text-amber-300">
                 Upgrade your plan
               </Link>
@@ -405,7 +400,7 @@ export default function NewAgentPage() {
           <div className="flex items-center gap-2">
             <Lock className="h-4 w-4 text-red-400" />
             <p className="text-sm font-medium text-red-400">
-              Agent limit reached ({plan.limits.maxAgents}/{plan.limits.maxAgents}).{" "}
+              Agent limit reached ({subscription.agentCount}/{plan.limits.maxAgents}).{" "}
               <Link href="/pricing" className="underline hover:text-red-300">
                 Upgrade your plan
               </Link>{" "}
@@ -424,7 +419,7 @@ export default function NewAgentPage() {
               <Link href="/pricing" className="underline hover:text-amber-300">
                 Upgrade
               </Link>{" "}
-              for more AI credits.
+              for more credits.
             </p>
           </div>
         </div>

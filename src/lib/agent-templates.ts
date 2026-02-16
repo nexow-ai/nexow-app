@@ -113,7 +113,7 @@ export const AGENT_TEMPLATES: AgentTemplate[] = [
     id: "news-trader-gold",
     name: "News-Aware Gold Trader",
     description:
-      "An AI agent that reads financial news and market analysis before deciding on Gold trades.",
+      "An agent that reads financial news and market analysis before deciding on Gold trades.",
     agent_type: "agent",
     difficulty: "advanced",
     tags: ["Gold", "News", "AI", "Agent"],
