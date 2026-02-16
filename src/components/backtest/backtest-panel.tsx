@@ -377,11 +377,10 @@ function LiveEquityCurveChart({
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ReturnType<typeof import("lightweight-charts").createChart> | null>(null);
   const seriesRef = useRef<ReturnType<ReturnType<typeof import("lightweight-charts").createChart>["addSeries"]> | null>(null);
-  const [initialized, setInitialized] = useState(false);
 
   // Initialize chart once
   useEffect(() => {
-    if (!containerRef.current || initialized) return;
+    if (!containerRef.current) return;
 
     let cancelled = false;
 
@@ -391,6 +390,11 @@ function LiveEquityCurveChart({
       );
 
       if (cancelled || !containerRef.current) return;
+
+      // Clear any stale chart
+      chartRef.current?.remove();
+      chartRef.current = null;
+      containerRef.current.innerHTML = "";
 
       const chart = createChart(containerRef.current, {
         width: containerRef.current.clientWidth,
@@ -433,16 +437,20 @@ function LiveEquityCurveChart({
         }
       });
       resizeObserver.observe(containerRef.current);
-
-      setInitialized(true);
     };
 
     init();
 
     return () => {
       cancelled = true;
+      chartRef.current?.remove();
+      chartRef.current = null;
+      seriesRef.current = null;
+      if (containerRef.current) {
+        containerRef.current.innerHTML = "";
+      }
     };
-  }, [initialized]);
+  }, []);
 
   // Update data when it changes
   useEffect(() => {
@@ -459,16 +467,7 @@ function LiveEquityCurveChart({
     chartRef.current.timeScale().fitContent();
   }, [data]);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      chartRef.current?.remove();
-      chartRef.current = null;
-      seriesRef.current = null;
-    };
-  }, []);
-
-  return <div ref={containerRef} className="h-[300px] w-full" />;
+  return <div ref={containerRef} className="h-[300px] w-full overflow-hidden" />;
 }
 
 // ------------------------------------------------------------------
@@ -481,20 +480,26 @@ function EquityCurveChart({
   data: EquityPoint[];
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<ReturnType<typeof import("lightweight-charts").createChart> | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || data.length === 0) return;
 
-    let chart: ReturnType<typeof import("lightweight-charts").createChart> | null = null;
+    let cancelled = false;
 
     const init = async () => {
       const { createChart, AreaSeries, ColorType } = await import(
         "lightweight-charts"
       );
 
-      if (!containerRef.current) return;
+      if (cancelled || !containerRef.current) return;
 
-      chart = createChart(containerRef.current, {
+      // Remove any previous chart before creating a new one
+      chartRef.current?.remove();
+      chartRef.current = null;
+      containerRef.current.innerHTML = "";
+
+      const chart = createChart(containerRef.current, {
         width: containerRef.current.clientWidth,
         height: 300,
         layout: {
@@ -519,6 +524,8 @@ function EquityCurveChart({
         },
       });
 
+      chartRef.current = chart;
+
       const areaSeries = chart.addSeries(AreaSeries, {
         lineColor: "rgba(168, 85, 247, 1)",
         topColor: "rgba(168, 85, 247, 0.3)",
@@ -533,7 +540,6 @@ function EquityCurveChart({
         }))
         .sort((a, b) => (a.time as number) - (b.time as number));
 
-      // Deduplicate: lightweight-charts requires strictly ascending timestamps
       const chartData = sorted.filter(
         (d, i, arr) => i === arr.length - 1 || d.time !== arr[i + 1].time
       );
@@ -544,8 +550,8 @@ function EquityCurveChart({
       chart.timeScale().fitContent();
 
       const resizeObserver = new ResizeObserver(() => {
-        if (chart && containerRef.current) {
-          chart.applyOptions({ width: containerRef.current.clientWidth });
+        if (chartRef.current && containerRef.current) {
+          chartRef.current.applyOptions({ width: containerRef.current.clientWidth });
         }
       });
       resizeObserver.observe(containerRef.current);
@@ -554,11 +560,16 @@ function EquityCurveChart({
     init();
 
     return () => {
-      chart?.remove();
+      cancelled = true;
+      chartRef.current?.remove();
+      chartRef.current = null;
+      if (containerRef.current) {
+        containerRef.current.innerHTML = "";
+      }
     };
   }, [data]);
 
-  return <div ref={containerRef} className="h-[300px] w-full" />;
+  return <div ref={containerRef} className="h-[300px] w-full overflow-hidden" />;
 }
 
 // ------------------------------------------------------------------
