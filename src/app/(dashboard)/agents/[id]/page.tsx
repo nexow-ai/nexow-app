@@ -1,7 +1,7 @@
 "use client";
 
 import { AgentStatusBadge } from "@/components/agents/agent-status-badge";
-import { AgentConsole } from "@/components/trading/agent-console";
+import { DecisionTimeline } from "@/components/agents/decision-timeline";
 import { ChartToolbar } from "@/components/trading/chart-toolbar";
 import { TradingViewWidget } from "@/components/trading/trading-view-widget";
 import { Badge } from "@/components/ui/badge";
@@ -18,16 +18,39 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { useAgent } from "@/hooks/use-agents";
 import { useTrades } from "@/hooks/use-trades";
+import { useEvaluations } from "@/hooks/use-evaluations";
 import type { InstrumentConfig } from "@/lib/types/database";
-import { BarChart3, Brain, Loader2, Pause, Play, Radio, Trash2 } from "lucide-react";
+import {
+  BarChart3,
+  Brain,
+  Coins,
+  Loader2,
+  Pause,
+  Play,
+  Radio,
+  Shield,
+  Scale,
+  Flame,
+  Sparkles,
+  Trash2,
+  Zap,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { use, useCallback, useEffect, useMemo, useState } from "react";
 
 type TradeView = "live" | "backtest";
+type SidePanel = "timeline" | "console";
 
 interface AgentDetailPageProps {
   params: Promise<{ id: string }>;
 }
+
+const STYLE_META: Record<string, { label: string; icon: typeof Shield; color: string }> = {
+  conservative: { label: "Conservative", icon: Shield, color: "text-blue-400" },
+  balanced: { label: "Balanced", icon: Scale, color: "text-purple-400" },
+  aggressive: { label: "Aggressive", icon: Flame, color: "text-amber-400" },
+  cautious: { label: "Cautious", icon: Shield, color: "text-blue-400" },
+};
 
 export default function AgentDetailPage({ params }: AgentDetailPageProps) {
   const { id } = use(params);
@@ -38,19 +61,20 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
     loading: tradesLoading,
     refetch: refetchTrades,
   } = useTrades(id);
+  const {
+    evaluations,
+    loading: evalsLoading,
+    totalTokens: evalsTotalTokens,
+    avgTokens: evalsAvgTokens,
+  } = useEvaluations(id);
+
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-
-  // Trade view toggle: live vs backtest
   const [tradeView, setTradeView] = useState<TradeView>("live");
-
-  // Live prices per instrument (for accurate PnL on all open trades)
+  const [sidePanel, setSidePanel] = useState<SidePanel>("timeline");
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
-
-  // Chart controlled state
   const [activeInstrument, setActiveInstrument] = useState<string>("");
   const [activeTimeframe, setActiveTimeframe] = useState<string>("");
 
-  // Initialize chart state from agent data
   useEffect(() => {
     if (agent && !activeInstrument) {
       setActiveInstrument(agent.instrument);
@@ -58,19 +82,16 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
     }
   }, [agent, activeInstrument]);
 
-  // Derive instruments list from agent
   const instruments: InstrumentConfig[] = agent
     ? Array.isArray(agent.instruments) && agent.instruments.length > 0
       ? agent.instruments
       : [{ instrument: agent.instrument, timeframe: agent.timeframe }]
     : [];
 
-  // Fetch live prices for all instruments that have open trades
   const fetchLivePrices = useCallback(async () => {
     const openTrades = trades.filter((t) => t.status === "open");
     if (openTrades.length === 0) return;
 
-    // Get unique instruments from open trades
     const openInstruments = [
       ...new Set(openTrades.map((t) => t.instrument)),
     ];
@@ -102,6 +123,15 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
     }, 10000);
     return () => clearInterval(interval);
   }, [fetchLivePrices, refetchTrades]);
+
+  const liveTrades = useMemo(
+    () => trades.filter((t) => !t.backtest_id),
+    [trades]
+  );
+  const backtestTrades = useMemo(
+    () => trades.filter((t) => !!t.backtest_id),
+    [trades]
+  );
 
   async function handleToggleStatus() {
     if (!agent) return;
@@ -148,18 +178,12 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
     );
   }
 
-  // Split trades into live and backtest
-  const liveTrades = useMemo(
-    () => trades.filter((t) => !t.backtest_id),
-    [trades]
-  );
-  const backtestTrades = useMemo(
-    () => trades.filter((t) => !!t.backtest_id),
-    [trades]
-  );
-  const hasBacktestData = backtestTrades.length > 0;
+  const agentConfig = (agent.config ?? {}) as Record<string, unknown>;
+  const personality = (agentConfig.personality as string) ?? "balanced";
+  const styleMeta = STYLE_META[personality] ?? STYLE_META.balanced;
+  const StyleIcon = styleMeta.icon;
 
-  // Use filtered trades for current view
+  const hasBacktestData = backtestTrades.length > 0;
   const viewTrades = tradeView === "live" ? liveTrades : backtestTrades;
 
   const closedTrades = viewTrades.filter((t) => t.status === "closed");
@@ -179,7 +203,7 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
     <div className="space-y-6">
       {/* Agent header */}
       <div className="relative overflow-hidden rounded-2xl border border-zinc-800/40 bg-zinc-900/30 p-6 backdrop-blur-sm">
-        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-cyan-500/5" />
+        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-transparent to-cyan-500/5" />
         <div className="relative flex items-center justify-between">
           <div>
             <div className="flex items-center gap-3">
@@ -193,16 +217,36 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
                 {agent.description}
               </p>
             )}
-            <div className="mt-3 flex items-center gap-2">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
               <Badge variant={agent.type === "bot" ? "info" : "warning"}>
                 {agent.type === "bot" ? (
-                  <><BarChart3 className="mr-1 h-3 w-3" />Bot</>
+                  <>
+                    <BarChart3 className="mr-1 h-3 w-3" />
+                    Bot
+                  </>
                 ) : (
-                  <><Brain className="mr-1 h-3 w-3" />Agent</>
+                  <>
+                    <Brain className="mr-1 h-3 w-3" />
+                    Agent
+                  </>
                 )}
               </Badge>
+              {agent.type === "agent" && (
+                <>
+                  <Badge variant="default">
+                    <Sparkles className="mr-1 h-3 w-3" />
+                    {agent.llm_model}
+                  </Badge>
+                  <Badge variant="default">
+                    <StyleIcon className="mr-1 h-3 w-3" />
+                    {styleMeta.label}
+                  </Badge>
+                </>
+              )}
               <span className="text-xs text-zinc-600">
-                {instruments.map((i) => i.instrument.replace("_", "/")).join(", ")}
+                {instruments
+                  .map((i) => i.instrument.replace("_", "/"))
+                  .join(", ")}
               </span>
             </div>
           </div>
@@ -270,7 +314,7 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
       )}
 
       {/* Performance stats */}
-      <div className="stagger-children grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="stagger-children grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-7">
         {[
           {
             label: "Total Return",
@@ -287,6 +331,16 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
             value: String(
               viewTrades.filter((t) => t.status === "open").length
             ),
+          },
+          {
+            label: "Total Tokens",
+            value: evalsTotalTokens > 1000
+              ? `${(evalsTotalTokens / 1000).toFixed(1)}k`
+              : String(evalsTotalTokens),
+          },
+          {
+            label: "Avg Tokens/Eval",
+            value: String(evalsAvgTokens),
           },
         ].map((stat) => (
           <div
@@ -314,7 +368,7 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
           onTimeframeChange={setActiveTimeframe}
         />
 
-        {/* Split view: Chart + Console */}
+        {/* Split view: Chart + Decision Timeline */}
         <div className="flex gap-0" style={{ height: 520 }}>
           {/* Chart */}
           <div className="min-w-0 flex-1 overflow-hidden rounded-bl-xl border-x border-b border-zinc-800/60 bg-zinc-900/20 p-4">
@@ -328,11 +382,124 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
             )}
           </div>
 
-          {/* Console */}
-          <AgentConsole
-            agentId={agent.id}
-            className="w-80 shrink-0 rounded-none rounded-br-xl border-b border-r border-zinc-800/60"
-          />
+          {/* Side panel */}
+          <div className="flex w-80 shrink-0 flex-col overflow-hidden rounded-br-xl border-b border-r border-zinc-800/60 bg-black/30">
+            {/* Panel tabs */}
+            <div className="flex shrink-0 border-b border-zinc-800/40">
+              <button
+                onClick={() => setSidePanel("timeline")}
+                className={`flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-semibold transition-colors ${
+                  sidePanel === "timeline"
+                    ? "border-b-2 border-purple-500 text-purple-300"
+                    : "text-zinc-500 hover:text-zinc-400"
+                }`}
+              >
+                <Zap className="h-3 w-3" />
+                Decisions
+              </button>
+              <button
+                onClick={() => setSidePanel("console")}
+                className={`flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-semibold transition-colors ${
+                  sidePanel === "console"
+                    ? "border-b-2 border-purple-500 text-purple-300"
+                    : "text-zinc-500 hover:text-zinc-400"
+                }`}
+              >
+                <Coins className="h-3 w-3" />
+                Token Usage
+              </button>
+            </div>
+
+            {/* Panel content */}
+            {sidePanel === "timeline" ? (
+              <DecisionTimeline
+                evaluations={evaluations}
+                loading={evalsLoading}
+                className="flex-1 p-2"
+              />
+            ) : (
+              <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                <div className="rounded-lg border border-zinc-800/40 bg-zinc-900/30 p-3">
+                  <p className="text-[10px] uppercase tracking-wider text-zinc-600">
+                    Total Tokens
+                  </p>
+                  <p className="mt-1 text-lg font-bold text-white">
+                    {evalsTotalTokens.toLocaleString()}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-zinc-800/40 bg-zinc-900/30 p-3">
+                  <p className="text-[10px] uppercase tracking-wider text-zinc-600">
+                    Avg per Evaluation
+                  </p>
+                  <p className="mt-1 text-lg font-bold text-white">
+                    {evalsAvgTokens.toLocaleString()}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-zinc-800/40 bg-zinc-900/30 p-3">
+                  <p className="text-[10px] uppercase tracking-wider text-zinc-600">
+                    Total Evaluations
+                  </p>
+                  <p className="mt-1 text-lg font-bold text-white">
+                    {evaluations.length}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-zinc-800/40 bg-zinc-900/30 p-3">
+                  <p className="text-[10px] uppercase tracking-wider text-zinc-600">
+                    Model
+                  </p>
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+                    <span className="text-sm font-semibold text-white">
+                      {agent.llm_model}
+                    </span>
+                    <span className="text-[10px] text-zinc-600">
+                      ({agent.llm_provider})
+                    </span>
+                  </div>
+                </div>
+
+                {/* Per-evaluation breakdown (last 10) */}
+                {evaluations.length > 0 && (
+                  <div>
+                    <p className="mb-2 text-[10px] uppercase tracking-wider text-zinc-600">
+                      Recent Evaluations
+                    </p>
+                    <div className="space-y-1">
+                      {evaluations.slice(0, 10).map((ev) => (
+                        <div
+                          key={ev.id}
+                          className="flex items-center justify-between rounded-md bg-zinc-900/50 px-2 py-1.5"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant={
+                                ev.action === "buy"
+                                  ? "success"
+                                  : ev.action === "sell"
+                                    ? "danger"
+                                    : ev.action === "close"
+                                      ? "info"
+                                      : "default"
+                              }
+                              className="!text-[9px] !px-1.5 !py-0.5"
+                            >
+                              {ev.action.toUpperCase()}
+                            </Badge>
+                            <span className="text-[10px] text-zinc-400">
+                              {ev.instrument.replace("_", "/")}
+                            </span>
+                          </div>
+                          <span className="text-[10px] tabular-nums text-zinc-500">
+                            {ev.total_tokens} tok
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -410,7 +577,8 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
                           {trade.return_pct >= 0 ? "+" : ""}
                           {Number(trade.return_pct).toFixed(2)}%
                         </span>
-                      ) : trade.status === "open" && livePrices[trade.instrument] ? (
+                      ) : trade.status === "open" &&
+                        livePrices[trade.instrument] ? (
                         (() => {
                           const entry = Number(trade.entry_price);
                           const price = livePrices[trade.instrument];

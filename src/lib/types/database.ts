@@ -104,6 +104,7 @@ export type Database = {
           opened_at: string;
           closed_at: string | null;
           backtest_id: string | null;
+          evaluation_id: string | null;
         };
         Insert: {
           agent_id: string;
@@ -114,6 +115,7 @@ export type Database = {
           stop_loss_pct?: number | null;
           take_profit_pct?: number | null;
           backtest_id?: string | null;
+          evaluation_id?: string | null;
           opened_at?: string;
           closed_at?: string | null;
           exit_price?: number | null;
@@ -125,6 +127,7 @@ export type Database = {
           return_pct?: number | null;
           closed_at?: string | null;
           backtest_id?: string | null;
+          evaluation_id?: string | null;
         };
       };
       agent_performance: {
@@ -137,6 +140,8 @@ export type Database = {
           avg_return_pct: number;
           max_drawdown: number;
           sharpe_ratio: number;
+          total_tokens_used: number;
+          total_evaluations: number;
           updated_at: string;
         };
         Insert: {
@@ -148,6 +153,8 @@ export type Database = {
           avg_return_pct?: number;
           max_drawdown?: number;
           sharpe_ratio?: number;
+          total_tokens_used?: number;
+          total_evaluations?: number;
         };
         Update: {
           total_trades?: number;
@@ -157,6 +164,8 @@ export type Database = {
           avg_return_pct?: number;
           max_drawdown?: number;
           sharpe_ratio?: number;
+          total_tokens_used?: number;
+          total_evaluations?: number;
         };
       };
       copy_subscriptions: {
@@ -262,6 +271,56 @@ export type Database = {
           action?: string;
           credits_used?: number;
           description?: string | null;
+        };
+      };
+      agent_evaluations: {
+        Row: {
+          id: string;
+          agent_id: string;
+          instrument: string;
+          action: string;
+          confidence: number;
+          reasoning: string | null;
+          technical_summary: string | null;
+          sentiment_summary: string | null;
+          data_sources_used: Json;
+          prompt_tokens: number;
+          completion_tokens: number;
+          total_tokens: number;
+          llm_provider: string | null;
+          llm_model: string | null;
+          duration_ms: number | null;
+          created_at: string;
+        };
+        Insert: {
+          agent_id: string;
+          instrument: string;
+          action: string;
+          confidence?: number;
+          reasoning?: string | null;
+          technical_summary?: string | null;
+          sentiment_summary?: string | null;
+          data_sources_used?: Json;
+          prompt_tokens?: number;
+          completion_tokens?: number;
+          total_tokens?: number;
+          llm_provider?: string | null;
+          llm_model?: string | null;
+          duration_ms?: number | null;
+        };
+        Update: {
+          action?: string;
+          confidence?: number;
+          reasoning?: string | null;
+          technical_summary?: string | null;
+          sentiment_summary?: string | null;
+          data_sources_used?: Json;
+          prompt_tokens?: number;
+          completion_tokens?: number;
+          total_tokens?: number;
+          llm_provider?: string | null;
+          llm_model?: string | null;
+          duration_ms?: number | null;
         };
       };
       agent_logs: {
