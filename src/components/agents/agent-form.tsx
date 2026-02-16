@@ -62,7 +62,7 @@ export function AgentForm() {
     <Card className="max-w-2xl">
       <CardTitle className="flex items-center gap-2">
         <Sparkles className="h-5 w-5 text-emerald-400" />
-        AI Agent Factory
+        Agent Factory
       </CardTitle>
       <CardDescription className="mt-1">
         Describe your trading strategy in plain English. Our AI will convert it
