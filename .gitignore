@@ -67,6 +67,11 @@ Desktop.ini
 # Local development
 .turbo
 
+# Cloudflare / OpenNext
+.open-next
+.dev.vars
+.wrangler
+
 # Sensitive data
 *.key
 *.pem
