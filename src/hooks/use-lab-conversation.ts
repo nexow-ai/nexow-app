@@ -162,8 +162,8 @@ export function useLabConversation() {
     });
 
     const abortRef = useRef<AbortController | null>(null);
-    const [provider, setProvider] = useState("deepseek");
-    const [model, setModel] = useState("deepseek-chat");
+    const [provider, setProvider] = useState("openai");
+    const [model, setModel] = useState("gpt-4.1");
     const [streamingStatus, setStreamingStatus] = useState<string | null>(null);
 
     const CLIENT_TIMEOUT_MS = 150_000;

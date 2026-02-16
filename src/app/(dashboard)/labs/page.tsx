@@ -22,11 +22,14 @@ export default function StrategyLabsPage() {
         updateBacktestState,
         setPhase,
         resetSession,
+        retryLastMessage,
+        clearError,
         templates,
         provider,
         model,
         setProvider,
         setModel,
+        streamingStatus,
     } = useLabConversation();
 
     const { state: backtestState, runBacktest, reset: resetBacktest } = useBacktest();
@@ -81,7 +84,7 @@ export default function StrategyLabsPage() {
         });
     }, [session.strategy, runBacktest, setPhase]);
 
-    // ── Deploy agent ────────────────────────────────────────────────────
+    // ── Deploy bot ─────────────────────────────────────────────────────
     const handleDeploy = useCallback(async () => {
         if (!session.strategy) return;
         setDeployLoading(true);
@@ -106,28 +109,26 @@ export default function StrategyLabsPage() {
                 timeframe: i.timeframe,
             }));
 
-            const { data: agentData, error: insertError } = await (
+            const { data: botData, error: insertError } = await (
                 supabase.from as Function
             )("agents")
                 .insert({
                     creator_id: user.id,
                     name: strategy.name,
                     description: strategy.description,
-                    type: strategy.type,
+                    type: "bot",
                     config,
                     prompt: strategy.entryRules,
                     instrument: instruments[0]?.instrument ?? "EUR_USD",
                     instruments,
                     timeframe: instruments[0]?.timeframe ?? "H1",
-                    llm_provider: "openai",
-                    llm_model: "gpt-4o-mini",
                     status: "active",
                 })
                 .select()
                 .single();
 
             if (insertError) throw insertError;
-            const agentId = (agentData as { id: string }).id;
+            const botId = (botData as { id: string }).id;
 
             // Save backtest if available
             if (
@@ -139,7 +140,7 @@ export default function StrategyLabsPage() {
                     supabase.from as Function
                 )("backtests")
                     .insert({
-                        agent_id: agentId,
+                        agent_id: botId,
                         creator_id: user.id,
                         config,
                         instruments,
@@ -167,7 +168,7 @@ export default function StrategyLabsPage() {
                 if (!btError && bt.trades.length > 0) {
                     const backtestId = (btData as { id: string }).id;
                     const tradeRecords = bt.trades.map((t) => ({
-                        agent_id: agentId,
+                        agent_id: botId,
                         backtest_id: backtestId,
                         instrument: t.instrument,
                         direction: t.direction,
@@ -188,8 +189,7 @@ export default function StrategyLabsPage() {
                 }
             }
 
-            const redirect = strategy.type === "bot" ? "bots" : "agents";
-            router.push(`/${redirect}/${agentId}`);
+            router.push(`/bots/${botId}`);
         } catch (err) {
             console.error("Deploy failed:", err);
             setDeployLoading(false);
@@ -248,10 +248,13 @@ export default function StrategyLabsPage() {
                         messages={session.messages}
                         templates={templates}
                         isStreaming={session.isStreaming}
+                        streamingStatus={streamingStatus}
                         showTemplates={session.phase === "welcome"}
                         error={session.error}
                         onSendMessage={sendMessage}
                         onSelectTemplate={handleSelectTemplate}
+                        onRetry={retryLastMessage}
+                        onDismissError={clearError}
                         provider={provider}
                         model={model}
                         onProviderChange={setProvider}
@@ -269,6 +272,7 @@ export default function StrategyLabsPage() {
                     <LabCanvas
                         strategy={session.strategy}
                         phase={session.phase}
+                        isStreaming={session.isStreaming}
                         backtestState={backtestState}
                         backtestResult={backtestState.result}
                         onRunBacktest={handleRunBacktest}
