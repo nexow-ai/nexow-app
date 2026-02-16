@@ -6,6 +6,7 @@ import {
   Brain,
   Copy,
   CreditCard,
+  FlaskConical,
   LayoutDashboard,
   LogOut,
   Sparkles,
@@ -19,6 +20,7 @@ import { Logo } from "./logo";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Strategy Labs", href: "/labs", icon: FlaskConical },
   { name: "My Bots", href: "/bots", icon: Zap },
   { name: "My Agents", href: "/agents", icon: Brain },
   { name: "Wall of Fame", href: "/leaderboard", icon: Trophy },
