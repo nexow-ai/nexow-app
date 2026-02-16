@@ -22,7 +22,7 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-3">
-        {/* AI Credits */}
+        {/* Credits */}
         {!loading && subscription && (
           <Link
             href="/billing"
