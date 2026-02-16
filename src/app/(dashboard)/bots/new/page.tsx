@@ -9,7 +9,6 @@ import {
   CardDescription,
   CardTitle,
 } from "@/components/ui/card";
-import { RuleDisplay } from "@/components/agents/rule-display";
 import { useBacktest } from "@/hooks/use-backtest";
 import { useSubscription } from "@/hooks/use-subscription";
 import { createClient } from "@/lib/supabase/client";
@@ -81,11 +80,12 @@ const ENTRY_EXAMPLES = [
   "Buy on M15 bullish engulfing if H4 shows RSI divergence and D1 EMA(50) is rising",
 ];
 
-interface GeneratedAgent {
+interface GeneratedBot {
   agent_type: string;
   name: string;
   description: string;
   portfolio_summary: string;
+  strategy_code: string;
   config: Record<string, unknown>;
 }
 
@@ -153,7 +153,7 @@ export default function NewBotPage() {
   // Step 4: Review / Deploy
   const [generating, setGenerating] = useState(false);
   const [deploying, setDeploying] = useState(false);
-  const [generated, setGenerated] = useState<GeneratedAgent | null>(null);
+  const [generated, setGenerated] = useState<GeneratedBot | null>(null);
   const [error, setError] = useState("");
 
   // Step 5: Backtest
@@ -243,15 +243,11 @@ export default function NewBotPage() {
     setGenerating(true);
 
     try {
-      const res = await fetch("/api/generate-agent", {
+      const res = await fetch("/api/generate-bot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: buildPrompt(),
-          instruments: Array.from(selectedInstruments),
-          agent_type: "bot",
-          entry_description: entryDescription,
-          exit_config: exitConfig,
         }),
       });
 
@@ -260,7 +256,7 @@ export default function NewBotPage() {
         throw new Error(err.error || "Generation failed");
       }
 
-      const data: GeneratedAgent = await res.json();
+      const data: GeneratedBot = await res.json();
       setGenerated(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -281,7 +277,10 @@ export default function NewBotPage() {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const config = { ...generated.config };
+      const config = {
+        ...generated.config,
+        ...(generated.strategy_code ? { strategy_code: generated.strategy_code } : {}),
+      };
       const instrumentsArr = Array.from(selectedInstruments);
       const primaryInstrument = instrumentsArr[0] ?? "EUR_USD";
 
@@ -418,8 +417,8 @@ export default function NewBotPage() {
 
   const atAgentLimit =
     subscription &&
-    !isUnlimited(plan.limits.maxAgents) &&
-    subscription.agentCount >= plan.limits.maxAgents;
+    !isUnlimited(plan.limits.maxBots) &&
+    subscription.botCount >= plan.limits.maxBots;
   const noCredits =
     subscription && subscription.creditsRemaining < CREDIT_COSTS.agentGeneration;
 
@@ -431,7 +430,7 @@ export default function NewBotPage() {
           <div className="flex items-center gap-2">
             <Lock className="h-4 w-4 text-red-400" />
             <p className="text-sm font-medium text-red-400">
-              Bot limit reached ({plan.limits.maxAgents}/{plan.limits.maxAgents}).{" "}
+              Bot limit reached ({subscription.botCount}/{plan.limits.maxBots}).{" "}
               <Link href="/pricing" className="underline hover:text-red-300">
                 Upgrade your plan
               </Link>{" "}
@@ -450,7 +449,7 @@ export default function NewBotPage() {
               <Link href="/pricing" className="underline hover:text-amber-300">
                 Upgrade
               </Link>{" "}
-              for more AI credits.
+              for more credits.
             </p>
           </div>
         </div>
@@ -1074,19 +1073,16 @@ export default function NewBotPage() {
                 </CardDescription>
 
                 <div className="mt-4 space-y-3">
-                  {(generated.config as Record<string, unknown>)?.rules ? (
+                  {generated.strategy_code && (
                     <div className="rounded-2xl border border-zinc-800/40 bg-zinc-900/30 p-4">
                       <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                        Trading Rules
+                        Strategy Code
                       </p>
-                      <RuleDisplay
-                        rules={
-                          (generated.config as Record<string, unknown>)
-                            .rules as Record<string, unknown>
-                        }
-                      />
+                      <pre className="max-h-64 overflow-auto rounded-lg bg-black/40 p-4 text-xs leading-relaxed text-emerald-300/90 font-mono">
+                        {generated.strategy_code}
+                      </pre>
                     </div>
-                  ) : null}
+                  )}
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">

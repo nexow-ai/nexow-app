@@ -288,6 +288,21 @@ export default function BotDetailPage({ params }: BotDetailPageProps) {
         ))}
       </div>
 
+      {/* Strategy code */}
+      {(bot.config as Record<string, unknown>)?.strategy_code && (
+        <Card>
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <Zap className="h-4 w-4 text-emerald-400" />
+            Strategy Code
+          </CardTitle>
+          <CardContent className="mt-3">
+            <pre className="max-h-64 overflow-auto rounded-lg bg-black/40 p-4 text-xs leading-relaxed text-emerald-300/90 font-mono">
+              {(bot.config as Record<string, unknown>).strategy_code as string}
+            </pre>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Chart workspace */}
       <div>
         <ChartToolbar
