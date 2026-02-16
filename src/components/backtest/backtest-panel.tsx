@@ -325,30 +325,6 @@ function ResultsView({
         </CardContent>
       </Card>
 
-      {/* Actions */}
-      <div className="flex items-center justify-between rounded-2xl border border-zinc-800/40 bg-zinc-900/30 p-6 backdrop-blur-sm">
-        <div>
-          <p className="text-sm font-medium text-zinc-300">
-            {stats.total_return_pct >= 0
-              ? "Your strategy shows positive results!"
-              : "Consider tweaking your strategy before deploying."}
-          </p>
-          <p className="mt-1 text-xs text-zinc-600">
-            Past performance does not guarantee future results.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4" />
-            Edit Strategy
-          </Button>
-          <Button onClick={onDeploy} loading={deployLoading}>
-            <Rocket className="h-4 w-4" />
-            Deploy Agent
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
     </div>
   );
 }
