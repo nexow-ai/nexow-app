@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const NEXOW_SERVER_URL =
-  process.env.NEXOW_SERVER_URL || "http://localhost:8000";
+  process.env.NEXOW_SERVER_URL || process.env.NEXOW_API_URL || "http://localhost:8000";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -15,7 +15,10 @@ export async function GET(request: NextRequest) {
 
     if (!resp.ok) {
       const text = await resp.text();
-      return NextResponse.json({ error: text }, { status: resp.status });
+      return NextResponse.json(
+        { error: text || `Backend returned ${resp.status}` },
+        { status: resp.status }
+      );
     }
 
     return NextResponse.json(await resp.json());
