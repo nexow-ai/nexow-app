@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { LAB_MODEL_CREDITS, LAB_DEFAULT_CREDITS } from "@/lib/stripe/plans";
 
+export const dynamic = "force-dynamic";
+
 const NEXOW_API_URL =
     process.env.NEXOW_API_URL || "http://localhost:8000";
 

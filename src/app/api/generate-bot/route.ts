@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { canDeployAgent, hasCredits } from "@/lib/stripe/guards";
 import { CREDIT_COSTS } from "@/lib/stripe/plans";
 
+export const dynamic = "force-dynamic";
+
 const NEXOW_API_URL =
   process.env.NEXOW_API_URL || "http://localhost:8000";
 

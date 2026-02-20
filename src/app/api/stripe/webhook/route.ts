@@ -4,6 +4,8 @@ import { getStripe } from "@/lib/stripe/server";
 import { PLANS, type PlanId } from "@/lib/stripe/plans";
 import type Stripe from "stripe";
 
+export const dynamic = "force-dynamic";
+
 // Use service role client to bypass RLS
 function getServiceClient() {
   return createClient(

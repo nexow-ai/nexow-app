@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 const NEXOW_API_URL =
   process.env.NEXOW_API_URL || "http://localhost:8000";
 
