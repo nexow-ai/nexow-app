@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { createClient } from "@/lib/supabase/client";
+import { useSession } from "@/hooks/use-session";
 import { Bot, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -17,6 +17,7 @@ const examplePrompts = [
 
 export function AgentForm() {
   const router = useRouter();
+  const { user } = useSession();
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -29,29 +30,25 @@ export function AgentForm() {
     setLoading(true);
 
     try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-
       if (!user) {
         setError("You must be signed in to create an agent.");
         setLoading(false);
         return;
       }
 
-      const { data, error: insertError } = await supabase
-        .from("agents")
-        .insert({
-          creator_id: user.id,
+      const res = await fetch("/api/agents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           name: "Generating...",
           prompt: prompt.trim(),
-          config: {} as Record<string, never>,
-        } as never)
-        .select()
-        .single();
+          config: {},
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to create agent");
 
-      if (insertError) throw insertError;
-
-      router.push(`/agents/${(data as { id: string }).id}`);
+      router.push(`/agents/${data.agent?.id ?? data.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setLoading(false);

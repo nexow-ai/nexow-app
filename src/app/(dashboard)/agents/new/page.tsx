@@ -9,8 +9,8 @@ import {
   type TradingStyle,
 } from "@/components/agents/trading-style-selector";
 import { DataSourceCards } from "@/components/agents/data-source-cards";
+import { useSession } from "@/hooks/use-session";
 import { useSubscription } from "@/hooks/use-subscription";
-import { createClient } from "@/lib/supabase/client";
 import {
   CREDIT_COSTS,
   formatCredits,
@@ -125,6 +125,7 @@ interface GeneratedAgent {
 
 export default function NewAgentPage() {
   const router = useRouter();
+  const { user } = useSession();
   const { data: subscription, plan, loading: subLoading } = useSubscription();
 
   // Wizard state
@@ -309,17 +310,11 @@ export default function NewAgentPage() {
   }
 
   async function handleDeploy() {
-    if (!generated) return;
+    if (!generated || !user) return;
     setError("");
     setDeploying(true);
 
     try {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
       const config = {
         ...generated.config,
         personality: tradingStyle,
@@ -348,11 +343,10 @@ export default function NewAgentPage() {
         };
       });
 
-      const { data, error: insertError } = await (
-        supabase.from as Function
-      )("agents")
-        .insert({
-          creator_id: user.id,
+      const res = await fetch("/api/agents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           name: agentName || generated.name,
           description: generated.description,
           type: "agent",
@@ -365,12 +359,11 @@ export default function NewAgentPage() {
           llm_model: llmModel,
           evaluation_schedule: evaluationSchedule,
           status: "active",
-        })
-        .select()
-        .single();
-
-      if (insertError) throw insertError;
-      router.push(`/agents/${(data as { id: string }).id}`);
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Deploy failed");
+      router.push(`/agents/${data.agent?.id ?? data.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Deploy failed");
       setDeploying(false);

@@ -1,45 +1,38 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/types/database";
 import { useCallback, useEffect, useState } from "react";
+import { useSession } from "./use-session";
 
 type Agent = Database["public"]["Tables"]["agents"]["Row"];
 
 export function useAgents(typeFilter?: "bot" | "agent") {
+  const { user } = useSession();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchAgents = useCallback(async () => {
-    setLoading(true);
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
     if (!user) {
       setAgents([]);
       setLoading(false);
       return;
     }
-
-    let query = supabase
-      .from("agents")
-      .select("*")
-      .eq("creator_id", user.id);
-
-    if (typeFilter) {
-      query = query.eq("type", typeFilter);
-    }
-
-    const { data, error } = await query.order("created_at", { ascending: false });
-
-    if (error) {
-      setError(error.message);
+    setLoading(true);
+    const url = typeFilter
+      ? `/api/agents?type=${typeFilter}`
+      : "/api/agents";
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error ?? "Failed to fetch agents");
+      setAgents([]);
     } else {
-      setAgents(data ?? []);
+      setError(null);
+      setAgents(data.agents ?? data ?? []);
     }
     setLoading(false);
-  }, [typeFilter]);
+  }, [user, typeFilter]);
 
   useEffect(() => {
     fetchAgents();
@@ -54,17 +47,14 @@ export function useAgent(id: string) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchAgent = useCallback(async () => {
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("agents")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (error) {
-      setError(error.message);
+    const res = await fetch(`/api/agents/${id}`);
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error ?? "Failed to fetch agent");
+      setAgent(null);
     } else {
-      setAgent(data);
+      setError(null);
+      setAgent(data.agent ?? data);
     }
     setLoading(false);
   }, [id]);

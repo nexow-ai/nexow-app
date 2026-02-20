@@ -14,19 +14,14 @@ export function useEvaluations(agentId?: string) {
   const fetchEvaluations = useCallback(async () => {
     if (!agentId) return;
     setLoading(true);
-    const supabase = createClient();
-
-    const { data, error: fetchError } = await supabase
-      .from("agent_evaluations")
-      .select("*")
-      .eq("agent_id", agentId)
-      .order("created_at", { ascending: false })
-      .limit(100);
-
-    if (fetchError) {
-      setError(fetchError.message);
+    const res = await fetch(`/api/evaluations?agentId=${encodeURIComponent(agentId)}`);
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error ?? "Failed to fetch evaluations");
+      setEvaluations([]);
     } else {
-      setEvaluations(data ?? []);
+      setError(null);
+      setEvaluations(data.evaluations ?? []);
     }
     setLoading(false);
   }, [agentId]);

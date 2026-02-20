@@ -68,17 +68,24 @@ export function AgentConsole({ agentId, className }: AgentConsoleProps) {
   useEffect(() => {
     async function loadHistory() {
       try {
-        const supabase = createClient();
-        const { data: trades } = await (supabase.from as Function)("trades")
-          .select("*")
-          .eq("agent_id", agentId)
-          .order("opened_at", { ascending: false })
-          .limit(30);
+        const res = await fetch(
+          `/api/trades?agentId=${encodeURIComponent(agentId)}`
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const trades = (data.trades ?? []) as Array<Record<string, unknown>>;
+        const recent = trades
+          .sort(
+            (a, b) =>
+              new Date(b.opened_at as string).getTime() -
+              new Date(a.opened_at as string).getTime()
+          )
+          .slice(0, 30);
 
-        if (trades && trades.length > 0) {
+        if (recent.length > 0) {
           const entries: LogEntry[] = [];
 
-          for (const trade of (trades as Array<Record<string, unknown>>).reverse()) {
+          for (const trade of recent.reverse()) {
             entries.push({
               id: `entry-${trade.id}`,
               time: new Date(trade.opened_at as string),
