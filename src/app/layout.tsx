@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   description:
     "Build trading bots and agents with plain English. Trade FX, Indices, Commodities, Stocks, and Crypto. Compete on The Arena and earn through blind social trading.",
   icons: {
-    icon: "/favicon.png",
+    icon: [{ url: "/favicon.png", type: "image/png", sizes: "32x32" }],
   },
 };
 
