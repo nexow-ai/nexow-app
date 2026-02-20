@@ -7,6 +7,7 @@ import { TradingViewWidget } from "@/components/trading/trading-view-widget";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import {
   Table,
   TableBody,
@@ -39,6 +40,7 @@ export default function BotDetailPage({ params }: BotDetailPageProps) {
     refetch: refetchTrades,
   } = useTrades(id);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   const [tradeView, setTradeView] = useState<TradeView>("live");
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
@@ -109,18 +111,11 @@ export default function BotDetailPage({ params }: BotDetailPageProps) {
   }
 
   async function handleDelete() {
-    if (
-      !bot ||
-      !confirm(
-        "Are you sure you want to delete this bot? This cannot be undone."
-      )
-    )
-      return;
+    if (!bot) return;
     setActionLoading("delete");
-
     const supabase = createClient();
     await (supabase.from as Function)("agents").delete().eq("id", bot.id);
-
+    setDeleteModalOpen(false);
     router.push("/bots");
   }
 
@@ -210,7 +205,7 @@ export default function BotDetailPage({ params }: BotDetailPageProps) {
             <Button
               variant="danger"
               size="sm"
-              onClick={handleDelete}
+              onClick={() => setDeleteModalOpen(true)}
               loading={actionLoading === "delete"}
             >
               <Trash2 className="h-4 w-4" />
@@ -219,6 +214,17 @@ export default function BotDetailPage({ params }: BotDetailPageProps) {
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        open={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        title="Delete bot"
+        message="Are you sure you want to delete this bot? This cannot be undone."
+        confirmLabel="Delete"
+        confirmVariant="danger"
+        loading={actionLoading === "delete"}
+      />
 
       {/* Live / Backtest toggle */}
       <TradeViewToggle

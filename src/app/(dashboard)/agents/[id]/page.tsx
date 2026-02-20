@@ -7,6 +7,7 @@ import { TradingViewWidget } from "@/components/trading/trading-view-widget";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import {
   Table,
   TableBody,
@@ -69,6 +70,7 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
   } = useEvaluations(id);
 
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [tradeView, setTradeView] = useState<TradeView>("live");
   const [sidePanel, setSidePanel] = useState<SidePanel>("timeline");
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
@@ -148,18 +150,11 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
   }
 
   async function handleDelete() {
-    if (
-      !agent ||
-      !confirm(
-        "Are you sure you want to delete this agent? This cannot be undone."
-      )
-    )
-      return;
+    if (!agent) return;
     setActionLoading("delete");
-
     const supabase = createClient();
     await (supabase.from as Function)("agents").delete().eq("id", agent.id);
-
+    setDeleteModalOpen(false);
     const redirectPath = agent.type === "bot" ? "/bots" : "/agents";
     router.push(redirectPath);
   }
@@ -275,7 +270,7 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
             <Button
               variant="danger"
               size="sm"
-              onClick={handleDelete}
+              onClick={() => setDeleteModalOpen(true)}
               loading={actionLoading === "delete"}
             >
               <Trash2 className="h-4 w-4" />
@@ -284,6 +279,17 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        open={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        title="Delete agent"
+        message="Are you sure you want to delete this agent? This cannot be undone."
+        confirmLabel="Delete"
+        confirmVariant="danger"
+        loading={actionLoading === "delete"}
+      />
 
       {/* Live / Backtest toggle */}
       {hasBacktestData && (
