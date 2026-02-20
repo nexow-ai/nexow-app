@@ -207,7 +207,7 @@ export function useLabConversation() {
                     model,
                 };
 
-                const response = await fetch("/api/labs/message", {
+                const response = await fetch("/api/lab-message", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(payload),
