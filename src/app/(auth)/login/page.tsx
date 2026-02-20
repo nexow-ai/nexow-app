@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/layout/logo";
-import { createClient } from "@/lib/supabase/client";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -22,11 +21,15 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
 
-      if (error) {
-        setError(error.message);
+      if (!res.ok) {
+        setError(data.error ?? "Sign in failed");
         return;
       }
 
@@ -35,8 +38,8 @@ export default function LoginPage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(
-        msg.includes("Supabase env vars") || msg.includes("undefined") || msg.includes("createBrowserClient")
-          ? "Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY to your Cloudflare build environment variables."
+        msg.includes("fetch") || msg.includes("Network")
+          ? "Unable to reach the server. Please try again."
           : msg
       );
     } finally {

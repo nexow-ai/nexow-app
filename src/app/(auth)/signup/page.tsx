@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/layout/logo";
-import { createClient } from "@/lib/supabase/client";
 import { ArrowRight, Check, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -23,10 +22,10 @@ export default function SignupPage() {
     if (trimmed.length < 3) { setUsernameStatus("idle"); return; }
 
     setUsernameStatus("checking");
-    const supabase = createClient();
-    const { data, error } = await (supabase.rpc as Function)("check_username_available", { desired_username: trimmed });
-    if (error) { setUsernameStatus("idle"); return; }
-    setUsernameStatus(data ? "available" : "taken");
+    const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(trimmed)}`);
+    const data = await res.json();
+    if (!res.ok) { setUsernameStatus("idle"); return; }
+    setUsernameStatus(data.available ? "available" : "taken");
   }, []);
 
   useEffect(() => {
@@ -40,14 +39,14 @@ export default function SignupPage() {
     setError("");
     setLoading(true);
 
-    const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { username: username.trim().toLowerCase(), display_name: username.trim() } },
+    const res = await fetch("/api/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, username: username.trim() }),
     });
+    const data = await res.json();
 
-    if (error) { setError(error.message); setLoading(false); return; }
+    if (!res.ok) { setError(data.error ?? "Sign up failed"); setLoading(false); return; }
     router.push("/dashboard");
     router.refresh();
   }
