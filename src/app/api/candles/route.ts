@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const NEXOW_SERVER_URL =
-  process.env.NEXOW_SERVER_URL || "http://localhost:8000";
+const NEXOW_API_URL =
+  process.env.NEXOW_API_URL || "http://localhost:8000";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   const count = searchParams.get("count") || "200";
 
   try {
-    const url = `${NEXOW_SERVER_URL}/api/data/candles?instrument=${instrument}&granularity=${granularity}&count=${count}`;
+    const url = `${NEXOW_API_URL}/api/data/candles?instrument=${instrument}&granularity=${granularity}&count=${count}`;
 
     const resp = await fetch(url, { next: { revalidate: 5 } });
 

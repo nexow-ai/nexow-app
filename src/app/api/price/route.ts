@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const NEXOW_SERVER_URL =
-  process.env.NEXOW_SERVER_URL || process.env.NEXOW_API_URL || "http://localhost:8000";
+const NEXOW_API_URL =
+  process.env.NEXOW_API_URL || "http://localhost:8000";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const resp = await fetch(
-      `${NEXOW_SERVER_URL}/api/data/prices/${instrument}`,
+      `${NEXOW_API_URL}/api/data/prices/${instrument}`,
       { cache: "no-store" }
     );
 

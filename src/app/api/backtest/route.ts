@@ -1,13 +1,13 @@
 import { NextRequest } from "next/server";
 
-const NEXOW_SERVER_URL =
-  process.env.NEXOW_SERVER_URL || "http://localhost:8000";
+const NEXOW_API_URL =
+  process.env.NEXOW_API_URL || "http://localhost:8000";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const engineResponse = await fetch(`${NEXOW_SERVER_URL}/api/backtest`, {
+    const engineResponse = await fetch(`${NEXOW_API_URL}/api/backtest`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

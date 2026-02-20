@@ -2,8 +2,8 @@ import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { LAB_MODEL_CREDITS, LAB_DEFAULT_CREDITS } from "@/lib/stripe/plans";
 
-const NEXOW_SERVER_URL =
-    process.env.NEXOW_SERVER_URL || "http://localhost:8000";
+const NEXOW_API_URL =
+    process.env.NEXOW_API_URL || "http://localhost:8000";
 
 export async function POST(request: NextRequest) {
     const supabase = await createClient();
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
 
     try {
         const engineResponse = await fetch(
-            `${NEXOW_SERVER_URL}/api/labs/message`,
+            `${NEXOW_API_URL}/api/labs/message`,
             {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },

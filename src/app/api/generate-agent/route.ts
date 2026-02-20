@@ -3,8 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { canDeployAgent, hasCredits } from "@/lib/stripe/guards";
 import { CREDIT_COSTS } from "@/lib/stripe/plans";
 
-const NEXOW_SERVER_URL =
-  process.env.NEXOW_SERVER_URL || "http://localhost:8000";
+const NEXOW_API_URL =
+  process.env.NEXOW_API_URL || "http://localhost:8000";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const resp = await fetch(`${NEXOW_SERVER_URL}/api/agents/generate`, {
+    const resp = await fetch(`${NEXOW_API_URL}/api/agents/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt }),

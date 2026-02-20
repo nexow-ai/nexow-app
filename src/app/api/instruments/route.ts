@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
-const NEXOW_SERVER_URL =
-  process.env.NEXOW_SERVER_URL || "http://localhost:8000";
+const NEXOW_API_URL =
+  process.env.NEXOW_API_URL || "http://localhost:8000";
 
 interface OandaTag {
   type: string;
@@ -209,7 +209,7 @@ export async function GET() {
   }
 
   try {
-    const resp = await fetch(`${NEXOW_SERVER_URL}/api/data/instruments`, {
+    const resp = await fetch(`${NEXOW_API_URL}/api/data/instruments`, {
       next: { revalidate: 3600 },
     });
 
