@@ -14,11 +14,14 @@ export async function GET(request: NextRequest) {
   try {
     const url = `${NEXOW_API_URL}/api/data/candles?instrument=${instrument}&granularity=${granularity}&count=${count}`;
 
-    const resp = await fetch(url, { next: { revalidate: 5 } });
+    const resp = await fetch(url, { cache: "no-store" });
 
     if (!resp.ok) {
       const text = await resp.text();
-      return NextResponse.json({ error: text }, { status: resp.status });
+      return NextResponse.json(
+        { error: text || `Backend returned ${resp.status}` },
+        { status: resp.status }
+      );
     }
 
     return NextResponse.json(await resp.json());
