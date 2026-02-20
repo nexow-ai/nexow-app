@@ -1,8 +1,8 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
 import { getPlan, type PlanId } from "@/lib/stripe/plans";
 import { useCallback, useEffect, useState } from "react";
+import { useSession } from "./use-session";
 
 export interface SubscriptionData {
   tier: PlanId;
@@ -18,98 +18,46 @@ export interface SubscriptionData {
   activeAgentCount: number;
 }
 
-interface SubRow {
-  tier: string;
-  status: string;
-  cancel_at_period_end: boolean;
-  current_period_end: string | null;
-}
-
-interface CreditRow {
-  credits_limit: number;
-  credits_used: number;
-}
-
 export function useSubscription() {
+  const { user } = useSession();
   const [data, setData] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
+    if (!user) {
+      setData(null);
+      setLoading(false);
+      return;
+    }
     try {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const from = (supabase.from as Function).bind(supabase);
-
-      const [
-        subResult,
-        creditsResult,
-        botResult,
-        activeBotResult,
-        agentResult,
-        activeAgentResult,
-      ] = await Promise.all([
-        from("subscriptions")
-          .select(
-            "tier, status, cancel_at_period_end, current_period_end"
-          )
-          .eq("user_id", user.id)
-          .single(),
-        from("ai_credits")
-          .select("credits_limit, credits_used")
-          .eq("user_id", user.id)
-          .single(),
-        from("agents")
-          .select("id", { count: "exact", head: true })
-          .eq("creator_id", user.id)
-          .eq("type", "bot")
-          .neq("status", "killed"),
-        from("agents")
-          .select("id", { count: "exact", head: true })
-          .eq("creator_id", user.id)
-          .eq("type", "bot")
-          .eq("status", "active"),
-        from("agents")
-          .select("id", { count: "exact", head: true })
-          .eq("creator_id", user.id)
-          .eq("type", "agent")
-          .neq("status", "killed"),
-        from("agents")
-          .select("id", { count: "exact", head: true })
-          .eq("creator_id", user.id)
-          .eq("type", "agent")
-          .eq("status", "active"),
-      ]);
-
-      const sub = subResult.data as SubRow | null;
-      const credits = creditsResult.data as CreditRow | null;
-
-      const tier = (sub?.tier ?? "free") as PlanId;
-      const creditsLimit = credits?.credits_limit ?? 100;
-      const creditsUsed = credits?.credits_used ?? 0;
-
+      const res = await fetch("/api/subscription");
+      if (!res.ok) {
+        setData(null);
+        return;
+      }
+      const raw = await res.json();
+      const creditsLimit = raw.creditsLimit ?? 100;
+      const creditsUsed = raw.creditsUsed ?? 0;
       setData({
-        tier,
-        status: sub?.status ?? "active",
+        tier: (raw.tier ?? "free") as PlanId,
+        status: raw.status ?? "active",
         creditsLimit,
         creditsUsed,
         creditsRemaining: Math.max(0, creditsLimit - creditsUsed),
-        cancelAtPeriodEnd: sub?.cancel_at_period_end ?? false,
-        currentPeriodEnd: sub?.current_period_end ?? null,
-        botCount: botResult.count ?? 0,
-        activeBotCount: activeBotResult.count ?? 0,
-        agentCount: agentResult.count ?? 0,
-        activeAgentCount: activeAgentResult.count ?? 0,
+        cancelAtPeriodEnd: raw.cancelAtPeriodEnd ?? false,
+        currentPeriodEnd: raw.currentPeriodEnd ?? null,
+        botCount: raw.botCount ?? 0,
+        activeBotCount: raw.activeBotCount ?? 0,
+        agentCount: raw.agentCount ?? 0,
+        activeAgentCount: raw.activeAgentCount ?? 0,
       });
     } catch (err) {
       console.error("Failed to fetch subscription:", err);
+      setData(null);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     refresh();

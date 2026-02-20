@@ -9,7 +9,6 @@ import {
   ColorType,
   createSeriesMarkers,
 } from "lightweight-charts";
-import { createClient } from "@/lib/supabase/client";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -118,13 +117,16 @@ export function TradingViewWidget({
   const fetchTrades = useCallback(async (): Promise<TradeRecord[]> => {
     if (!agentId) return [];
     try {
-      const supabase = createClient();
-      const { data } = await (supabase.from as Function)("trades")
-        .select("*")
-        .eq("agent_id", agentId)
-        .eq("instrument", instrument)
-        .order("opened_at", { ascending: true });
-      return (data ?? []) as TradeRecord[];
+      const res = await fetch(
+        `/api/trades?agentId=${encodeURIComponent(agentId)}&instrument=${encodeURIComponent(instrument)}`
+      );
+      if (!res.ok) return [];
+      const data = await res.json();
+      const trades = (data.trades ?? []) as TradeRecord[];
+      trades.sort(
+        (a, b) => new Date(a.opened_at).getTime() - new Date(b.opened_at).getTime()
+      );
+      return trades;
     } catch {
       return [];
     }

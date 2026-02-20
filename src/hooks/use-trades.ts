@@ -1,6 +1,5 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/types/database";
 import { useCallback, useEffect, useState } from "react";
 
@@ -13,24 +12,17 @@ export function useTrades(agentId?: string) {
 
   const fetchTrades = useCallback(async () => {
     setLoading(true);
-    const supabase = createClient();
-
-    let query = supabase
-      .from("trades")
-      .select("*")
-      .order("opened_at", { ascending: false })
-      .limit(500);
-
-    if (agentId) {
-      query = query.eq("agent_id", agentId);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      setError(error.message);
+    const url = agentId
+      ? `/api/trades?agentId=${encodeURIComponent(agentId)}`
+      : "/api/trades";
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error ?? "Failed to fetch trades");
+      setTrades([]);
     } else {
-      setTrades(data ?? []);
+      setError(null);
+      setTrades(data.trades ?? []);
     }
     setLoading(false);
   }, [agentId]);
