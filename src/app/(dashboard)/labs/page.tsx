@@ -4,8 +4,8 @@ import { LabCanvas } from "@/components/labs/lab-canvas";
 import { LabConversation } from "@/components/labs/lab-conversation";
 import { useBacktest } from "@/hooks/use-backtest";
 import { useLabConversation } from "@/hooks/use-lab-conversation";
+import { useSession } from "@/hooks/use-session";
 import { useSubscription } from "@/hooks/use-subscription";
-import { createClient } from "@/lib/supabase/client";
 import type { LabTemplate } from "@/lib/types/labs";
 import { FlaskConical, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -13,6 +13,7 @@ import { useCallback, useState } from "react";
 
 export default function StrategyLabsPage() {
     const router = useRouter();
+    const { user } = useSession();
     const { data: subscription } = useSubscription();
     const {
         session,
@@ -86,16 +87,10 @@ export default function StrategyLabsPage() {
 
     // ── Deploy bot ─────────────────────────────────────────────────────
     const handleDeploy = useCallback(async () => {
-        if (!session.strategy) return;
+        if (!session.strategy || !user) return;
         setDeployLoading(true);
 
         try {
-            const supabase = createClient();
-            const {
-                data: { user },
-            } = await supabase.auth.getUser();
-            if (!user) throw new Error("Not authenticated");
-
             const strategy = session.strategy;
             const config = {
                 ...strategy.config,
@@ -109,11 +104,10 @@ export default function StrategyLabsPage() {
                 timeframe: i.timeframe,
             }));
 
-            const { data: botData, error: insertError } = await (
-                supabase.from as Function
-            )("agents")
-                .insert({
-                    creator_id: user.id,
+            const agentRes = await fetch("/api/agents", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
                     name: strategy.name,
                     description: strategy.description,
                     type: "bot",
@@ -123,25 +117,22 @@ export default function StrategyLabsPage() {
                     instruments,
                     timeframe: instruments[0]?.timeframe ?? "H1",
                     status: "active",
-                })
-                .select()
-                .single();
+                }),
+            });
+            const botData = await agentRes.json();
+            if (!agentRes.ok) throw new Error(botData.error ?? "Deploy failed");
+            const botId = botData.agent?.id ?? botData.id;
 
-            if (insertError) throw insertError;
-            const botId = (botData as { id: string }).id;
-
-            // Save backtest if available
             if (
                 backtestState.phase === "complete" &&
                 backtestState.result
             ) {
                 const bt = backtestState.result;
-                const { data: btData, error: btError } = await (
-                    supabase.from as Function
-                )("backtests")
-                    .insert({
+                const btRes = await fetch("/api/backtests", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
                         agent_id: botId,
-                        creator_id: user.id,
                         config,
                         instruments,
                         exit_config: {
@@ -161,12 +152,11 @@ export default function StrategyLabsPage() {
                         sharpe_ratio: bt.stats.sharpe_ratio,
                         profit_factor: bt.stats.profit_factor,
                         equity_curve: bt.equity_curve,
-                    })
-                    .select()
-                    .single();
-
-                if (!btError && bt.trades.length > 0) {
-                    const backtestId = (btData as { id: string }).id;
+                    }),
+                });
+                const btData = await btRes.json();
+                if (btRes.ok && bt.trades.length > 0) {
+                    const backtestId = btData.backtest?.id ?? btData.id;
                     const tradeRecords = bt.trades.map((t) => ({
                         agent_id: botId,
                         backtest_id: backtestId,
@@ -181,11 +171,11 @@ export default function StrategyLabsPage() {
                         opened_at: t.entry_time,
                         closed_at: t.exit_time,
                     }));
-
-                    for (let i = 0; i < tradeRecords.length; i += 100) {
-                        const batch = tradeRecords.slice(i, i + 100);
-                        await (supabase.from as Function)("trades").insert(batch);
-                    }
+                    await fetch("/api/trades", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ trades: tradeRecords }),
+                    });
                 }
             }
 
@@ -194,7 +184,7 @@ export default function StrategyLabsPage() {
             console.error("Deploy failed:", err);
             setDeployLoading(false);
         }
-    }, [session.strategy, backtestState, router]);
+    }, [session.strategy, backtestState, router, user]);
 
     return (
         <div className="flex h-[calc(100vh-8rem)] flex-col">

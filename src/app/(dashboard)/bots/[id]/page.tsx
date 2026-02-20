@@ -16,7 +16,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { createClient } from "@/lib/supabase/client";
 import { useAgent } from "@/hooks/use-agents";
 import { useTrades } from "@/hooks/use-trades";
 import type { InstrumentConfig } from "@/lib/types/database";
@@ -100,12 +99,11 @@ export default function BotDetailPage({ params }: BotDetailPageProps) {
     if (!bot) return;
     const newStatus = bot.status === "active" ? "paused" : "active";
     setActionLoading("toggle");
-
-    const supabase = createClient();
-    await (supabase.from as Function)("agents")
-      .update({ status: newStatus })
-      .eq("id", bot.id);
-
+    await fetch(`/api/agents/${bot.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus }),
+    });
     await refetch();
     setActionLoading(null);
   }
@@ -113,8 +111,7 @@ export default function BotDetailPage({ params }: BotDetailPageProps) {
   async function handleDelete() {
     if (!bot) return;
     setActionLoading("delete");
-    const supabase = createClient();
-    await (supabase.from as Function)("agents").delete().eq("id", bot.id);
+    await fetch(`/api/agents/${bot.id}`, { method: "DELETE" });
     setDeleteModalOpen(false);
     router.push("/bots");
   }

@@ -10,8 +10,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useBacktest } from "@/hooks/use-backtest";
+import { useSession } from "@/hooks/use-session";
 import { useSubscription } from "@/hooks/use-subscription";
-import { createClient } from "@/lib/supabase/client";
 import {
   CREDIT_COSTS,
   formatCredits,
@@ -95,6 +95,7 @@ interface GeneratedBot {
 
 export default function NewBotPage() {
   const router = useRouter();
+  const { user } = useSession();
   const { data: subscription, plan, loading: subLoading } = useSubscription();
 
   // Wizard state
@@ -266,17 +267,11 @@ export default function NewBotPage() {
   }
 
   async function handleDeployWithBacktest() {
-    if (!generated) return;
+    if (!generated || !user) return;
     setError("");
     setDeploying(true);
 
     try {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
       const config = {
         ...generated.config,
         ...(generated.strategy_code ? { strategy_code: generated.strategy_code } : {}),
@@ -303,12 +298,10 @@ export default function NewBotPage() {
         };
       });
 
-      // 1. Insert the bot
-      const { data: agentData, error: insertError } = await (
-        supabase.from as Function
-      )("agents")
-        .insert({
-          creator_id: user.id,
+      const agentRes = await fetch("/api/agents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           name: generated.name,
           description: generated.description,
           type: "bot",
@@ -320,26 +313,22 @@ export default function NewBotPage() {
           llm_provider: "openai",
           llm_model: "gpt-4o-mini",
           status: "active",
-        })
-        .select()
-        .single();
+        }),
+      });
+      const agentData = await agentRes.json();
+      if (!agentRes.ok) throw new Error(agentData.error ?? "Failed to create bot");
+      const agentId = agentData.agent?.id ?? agentData.id;
 
-      if (insertError) throw insertError;
-      const agentId = (agentData as { id: string }).id;
-
-      // 2. If backtest completed, save backtest record and trades
       if (
         backtestState.phase === "complete" &&
         backtestState.result
       ) {
         const bt = backtestState.result;
-
-        const { data: btData, error: btError } = await (
-          supabase.from as Function
-        )("backtests")
-          .insert({
+        const btRes = await fetch("/api/backtests", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
             agent_id: agentId,
-            creator_id: user.id,
             config: generated.config,
             instruments: uniqueInstruments,
             exit_config: {
@@ -363,15 +352,11 @@ export default function NewBotPage() {
             sharpe_ratio: bt.stats.sharpe_ratio,
             profit_factor: bt.stats.profit_factor,
             equity_curve: bt.equity_curve,
-          })
-          .select()
-          .single();
-
-        if (btError) {
-          console.error("Failed to save backtest:", btError);
-        } else if (bt.trades.length > 0) {
-          const backtestId = (btData as { id: string }).id;
-
+          }),
+        });
+        const btData = await btRes.json();
+        if (btRes.ok && bt.trades.length > 0) {
+          const backtestId = btData.backtest?.id ?? btData.id;
           const tradeRecords = bt.trades.map((t) => ({
             agent_id: agentId,
             backtest_id: backtestId,
@@ -386,11 +371,11 @@ export default function NewBotPage() {
             opened_at: t.entry_time,
             closed_at: t.exit_time,
           }));
-
-          for (let i = 0; i < tradeRecords.length; i += 100) {
-            const batch = tradeRecords.slice(i, i + 100);
-            await (supabase.from as Function)("trades").insert(batch);
-          }
+          await fetch("/api/trades", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ trades: tradeRecords }),
+          });
         }
       }
 

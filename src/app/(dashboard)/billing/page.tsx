@@ -9,7 +9,6 @@ import {
   formatCredits,
   isUnlimited,
 } from "@/lib/stripe/plans";
-import { createClient } from "@/lib/supabase/client";
 import {
   ArrowUpRight,
   Bot,
@@ -54,19 +53,10 @@ function BillingContent() {
 
   useEffect(() => {
     async function fetchUsage() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data } = await (supabase.from as Function)("credit_usage_log")
-        .select("id, action, credits_used, description, created_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(20);
-
-      if (data) setUsageLog(data as UsageLogEntry[]);
+      const res = await fetch("/api/billing/usage");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (Array.isArray(data)) setUsageLog(data as UsageLogEntry[]);
     }
     fetchUsage();
   }, []);
