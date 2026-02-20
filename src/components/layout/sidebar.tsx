@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import {
-  Bot,
+  // Bot,
   Brain,
   Copy,
   CreditCard,
