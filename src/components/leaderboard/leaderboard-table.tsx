@@ -79,13 +79,21 @@ export function LeaderboardTable({ entries }: LeaderboardTableProps) {
                 </Badge>
               </TableCell>
               <TableCell>
-                <span className={entry.roi_pct >= 0 ? "text-emerald-400" : "text-red-400"}>
+                <span
+                  className={
+                    entry.roi_pct >= 0 ? "text-emerald-400" : "text-red-400"
+                  }
+                >
                   {formatPercent(entry.roi_pct)}
                 </span>
               </TableCell>
               <TableCell>{entry.win_rate.toFixed(1)}%</TableCell>
               <TableCell>
-                <span className={entry.total_pnl >= 0 ? "text-emerald-400" : "text-red-400"}>
+                <span
+                  className={
+                    entry.total_pnl >= 0 ? "text-emerald-400" : "text-red-400"
+                  }
+                >
                   {formatCurrency(entry.total_pnl)}
                 </span>
               </TableCell>

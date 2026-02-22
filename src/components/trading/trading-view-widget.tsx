@@ -73,9 +73,7 @@ export function TradingViewWidget({
   );
   const candlesRef = useRef<CandleData[]>([]);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [status, setStatus] = useState<"loading" | "live" | "error">(
-    "loading"
-  );
+  const [status, setStatus] = useState<"loading" | "live" | "error">("loading");
 
   // ── Data fetchers ──────────────────────────────────────────────────────
 
@@ -124,7 +122,8 @@ export function TradingViewWidget({
       const data = await res.json();
       const trades = (data.trades ?? []) as TradeRecord[];
       trades.sort(
-        (a, b) => new Date(a.opened_at).getTime() - new Date(b.opened_at).getTime()
+        (a, b) =>
+          new Date(a.opened_at).getTime() - new Date(b.opened_at).getTime()
       );
       return trades;
     } catch {
@@ -219,8 +218,7 @@ export function TradingViewWidget({
         // Uses floor division to find the candle boundary, then
         // verifies it exists in the loaded data.
         const snapToCandle = (epochSec: number): number | null => {
-          const candleStart =
-            Math.floor(epochSec / duration) * duration;
+          const candleStart = Math.floor(epochSec / duration) * duration;
 
           // Exact match in loaded candles
           if (candleTimeSet.has(candleStart)) return candleStart;
@@ -283,7 +281,8 @@ export function TradingViewWidget({
                   : "";
               markers.push({
                 time: exitCandle as Time,
-                position: (trade.return_pct ?? 0) >= 0 ? "aboveBar" : "belowBar",
+                position:
+                  (trade.return_pct ?? 0) >= 0 ? "aboveBar" : "belowBar",
                 color: (trade.return_pct ?? 0) >= 0 ? "#10b981" : "#ef4444",
                 shape: "circle",
                 text: `CLOSE @ ${Number(trade.exit_price).toFixed(5)}${returnStr}`,
@@ -327,8 +326,7 @@ export function TradingViewWidget({
       const lastCandle = candles[candles.length - 1];
 
       // Align to candle boundary: which candle does this price belong to?
-      const currentCandleStart =
-        Math.floor(price.time / duration) * duration;
+      const currentCandleStart = Math.floor(price.time / duration) * duration;
 
       if (currentCandleStart === lastCandle.time) {
         // Same candle — update OHLC
@@ -373,7 +371,15 @@ export function TradingViewWidget({
       candleSeriesRef.current = null;
       candlesRef.current = [];
     };
-  }, [instrument, granularity, agentId, height, fetchCandles, fetchPrice, fetchTrades]);
+  }, [
+    instrument,
+    granularity,
+    agentId,
+    height,
+    fetchCandles,
+    fetchPrice,
+    fetchTrades,
+  ]);
 
   // ── Render ─────────────────────────────────────────────────────────────
 

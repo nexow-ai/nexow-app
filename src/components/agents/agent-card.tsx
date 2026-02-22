@@ -28,11 +28,13 @@ export function AgentCard({ agent, linkPrefix, performance }: AgentCardProps) {
         <div className="relative">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-xl border ${
-                agent.type === "agent"
-                  ? "bg-gradient-to-br from-purple-500/10 to-cyan-500/10 border-purple-500/10"
-                  : "bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border-emerald-500/10"
-              }`}>
+              <div
+                className={`flex h-10 w-10 items-center justify-center rounded-xl border ${
+                  agent.type === "agent"
+                    ? "bg-gradient-to-br from-purple-500/10 to-cyan-500/10 border-purple-500/10"
+                    : "bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border-emerald-500/10"
+                }`}
+              >
                 {agent.type === "agent" ? (
                   <Brain className="h-5 w-5 text-purple-400" />
                 ) : (
@@ -40,15 +42,22 @@ export function AgentCard({ agent, linkPrefix, performance }: AgentCardProps) {
                 )}
               </div>
               <div>
-                <h3 className="font-semibold text-zinc-100 group-hover:text-white transition-colors">{agent.name}</h3>
-                <p className="text-xs text-zinc-600">{agent.instrument.replace("_", "/")} &middot; {agent.timeframe}</p>
+                <h3 className="font-semibold text-zinc-100 group-hover:text-white transition-colors">
+                  {agent.name}
+                </h3>
+                <p className="text-xs text-zinc-600">
+                  {agent.instrument.replace("_", "/")} &middot;{" "}
+                  {agent.timeframe}
+                </p>
               </div>
             </div>
             <AgentStatusBadge status={agent.status} />
           </div>
 
           {agent.description && (
-            <p className="mt-3 text-sm text-zinc-500 line-clamp-2 leading-relaxed">{agent.description}</p>
+            <p className="mt-3 text-sm text-zinc-500 line-clamp-2 leading-relaxed">
+              {agent.description}
+            </p>
           )}
 
           <div className="mt-4 flex items-center gap-3">
@@ -58,11 +67,20 @@ export function AgentCard({ agent, linkPrefix, performance }: AgentCardProps) {
 
             {performance && (
               <div className="flex items-center gap-3 text-xs">
-                <span className={performance.total_return_pct >= 0 ? "text-emerald-400" : "text-red-400"}>
-                  {performance.total_return_pct >= 0 ? "+" : ""}{performance.total_return_pct.toFixed(2)}%
+                <span
+                  className={
+                    performance.total_return_pct >= 0
+                      ? "text-emerald-400"
+                      : "text-red-400"
+                  }
+                >
+                  {performance.total_return_pct >= 0 ? "+" : ""}
+                  {performance.total_return_pct.toFixed(2)}%
                 </span>
                 <span className="text-zinc-600">|</span>
-                <span className="text-zinc-500">{performance.win_rate.toFixed(0)}% WR</span>
+                <span className="text-zinc-500">
+                  {performance.win_rate.toFixed(0)}% WR
+                </span>
               </div>
             )}
           </div>

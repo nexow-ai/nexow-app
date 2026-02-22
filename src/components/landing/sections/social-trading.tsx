@@ -2,27 +2,37 @@
 
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
-import { Lock, Eye, DollarSign, ArrowDown, Shield, Sparkles } from "lucide-react";
+import {
+  Lock,
+  Eye,
+  DollarSign,
+  ArrowDown,
+  Shield,
+  Sparkles,
+} from "lucide-react";
 
 const benefits = [
   {
     icon: Lock,
     title: "Strategy Stays Encrypted",
-    description: "Your logic, rules, and parameters are never revealed. Copiers can't see or reverse-engineer your edge.",
+    description:
+      "Your logic, rules, and parameters are never revealed. Copiers can't see or reverse-engineer your edge.",
     color: "text-emerald-400",
     bg: "bg-emerald-500/10 border-emerald-500/20",
   },
   {
     icon: Eye,
     title: "Results Are Transparent",
-    description: "Copiers see real-time P&L, drawdown, and performance metrics. Trust through verified track records.",
+    description:
+      "Copiers see real-time P&L, drawdown, and performance metrics. Trust through verified track records.",
     color: "text-cyan-400",
     bg: "bg-cyan-500/10 border-cyan-500/20",
   },
   {
     icon: DollarSign,
     title: "Creators Earn Fees",
-    description: "Every copier generates revenue for the strategy creator. Build once, earn passively as your reputation grows.",
+    description:
+      "Every copier generates revenue for the strategy creator. Build once, earn passively as your reputation grows.",
     color: "text-amber-400",
     bg: "bg-amber-500/10 border-amber-500/20",
   },
@@ -80,7 +90,9 @@ function FlowDiagram() {
         <div className="h-6 w-px bg-gradient-to-b from-emerald-500/40 to-zinc-700/40" />
         <div className="rounded-full border border-zinc-700/50 bg-zinc-900/80 px-4 py-1.5 flex items-center gap-2">
           <Shield className="h-3.5 w-3.5 text-zinc-400" />
-          <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Blind Layer</span>
+          <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">
+            Blind Layer
+          </span>
         </div>
         <div className="h-6 w-px bg-gradient-to-b from-zinc-700/40 to-cyan-500/40" />
         <ArrowDown className="h-4 w-4 text-zinc-600" />
@@ -149,7 +161,8 @@ export function SocialTrading() {
 
             <p className="text-lg text-zinc-400 mb-10 leading-relaxed">
               The first social trading platform where creators keep their edge.
-              Copy the best-performing agents without ever seeing the strategy behind them.
+              Copy the best-performing agents without ever seeing the strategy
+              behind them.
             </p>
 
             <div className="space-y-6">
@@ -162,12 +175,18 @@ export function SocialTrading() {
                   transition={{ duration: 0.5, delay: 0.2 + 0.1 * i }}
                   className="flex items-start gap-4"
                 >
-                  <div className={`flex-shrink-0 rounded-xl border p-2.5 ${benefit.bg}`}>
+                  <div
+                    className={`flex-shrink-0 rounded-xl border p-2.5 ${benefit.bg}`}
+                  >
                     <benefit.icon className={`h-5 w-5 ${benefit.color}`} />
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-white mb-1">{benefit.title}</h3>
-                    <p className="text-sm text-zinc-500 leading-relaxed">{benefit.description}</p>
+                    <h3 className="text-sm font-semibold text-white mb-1">
+                      {benefit.title}
+                    </h3>
+                    <p className="text-sm text-zinc-500 leading-relaxed">
+                      {benefit.description}
+                    </p>
                   </div>
                 </motion.div>
               ))}

@@ -33,11 +33,7 @@ export function ConfirmModal({
         <Button variant="outline" onClick={onClose} disabled={loading}>
           {cancelLabel}
         </Button>
-        <Button
-          variant={confirmVariant}
-          onClick={onConfirm}
-          loading={loading}
-        >
+        <Button variant={confirmVariant} onClick={onConfirm} loading={loading}>
           {confirmLabel}
         </Button>
       </div>

@@ -140,7 +140,13 @@ function RankBadge({ rank }: { rank: number }) {
   );
 }
 
-function MiniSparkline({ data, positive }: { data: number[]; positive: boolean }) {
+function MiniSparkline({
+  data,
+  positive,
+}: {
+  data: number[];
+  positive: boolean;
+}) {
   const max = Math.max(...data);
   const min = Math.min(...data);
   const range = max - min || 1;
@@ -151,7 +157,8 @@ function MiniSparkline({ data, positive }: { data: number[]; positive: boolean }
   const points = data
     .map((v, i) => {
       const x = (i / (data.length - 1)) * w;
-      const y = padding + (h - padding * 2) - ((v - min) / range) * (h - padding * 2);
+      const y =
+        padding + (h - padding * 2) - ((v - min) / range) * (h - padding * 2);
       return `${x},${y}`;
     })
     .join(" ");
@@ -163,8 +170,16 @@ function MiniSparkline({ data, positive }: { data: number[]; positive: boolean }
     <svg width={w} height={h} className="flex-shrink-0">
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={positive ? "#10b981" : "#ef4444"} stopOpacity="0.3" />
-          <stop offset="100%" stopColor={positive ? "#10b981" : "#ef4444"} stopOpacity="0" />
+          <stop
+            offset="0%"
+            stopColor={positive ? "#10b981" : "#ef4444"}
+            stopOpacity="0.3"
+          />
+          <stop
+            offset="100%"
+            stopColor={positive ? "#10b981" : "#ef4444"}
+            stopOpacity="0"
+          />
         </linearGradient>
       </defs>
       <polygon points={areaPoints} fill={`url(#${gradientId})`} />
@@ -208,7 +223,8 @@ export function Arena() {
             The Arena
           </h2>
           <p className="mt-4 text-lg text-zinc-500 max-w-xl mx-auto">
-            Top-performing trading agents ranked by real results. Skill over luck.
+            Top-performing trading agents ranked by real results. Skill over
+            luck.
           </p>
         </motion.div>
 
@@ -223,14 +239,30 @@ export function Arena() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-zinc-800/60 bg-zinc-900/40">
-                  <th className="px-5 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Rank</th>
-                  <th className="px-5 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Agent</th>
-                  <th className="px-5 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Type</th>
-                  <th className="px-5 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-500">ROI (30d)</th>
-                  <th className="px-5 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Win Rate</th>
-                  <th className="px-5 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Max DD</th>
-                  <th className="px-5 py-4 text-center text-[11px] font-semibold uppercase tracking-wider text-zinc-500">30d Chart</th>
-                  <th className="px-5 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Copiers</th>
+                  <th className="px-5 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                    Rank
+                  </th>
+                  <th className="px-5 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                    Agent
+                  </th>
+                  <th className="px-5 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                    Type
+                  </th>
+                  <th className="px-5 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                    ROI (30d)
+                  </th>
+                  <th className="px-5 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                    Win Rate
+                  </th>
+                  <th className="px-5 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                    Max DD
+                  </th>
+                  <th className="px-5 py-4 text-center text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                    30d Chart
+                  </th>
+                  <th className="px-5 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                    Copiers
+                  </th>
                   <th className="px-5 py-4"></th>
                 </tr>
               </thead>
@@ -250,38 +282,59 @@ export function Arena() {
                     </td>
                     <td className="px-5 py-3.5">
                       <div>
-                        <p className="font-semibold text-white text-sm">{agent.name}</p>
-                        <p className="text-xs text-zinc-600 mt-0.5">{agent.creator}</p>
+                        <p className="font-semibold text-white text-sm">
+                          {agent.name}
+                        </p>
+                        <p className="text-xs text-zinc-600 mt-0.5">
+                          {agent.creator}
+                        </p>
                       </div>
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
-                        agent.strategy === "Bot"
-                          ? "bg-cyan-500/10 text-cyan-400 ring-1 ring-cyan-500/20"
-                          : "bg-purple-500/10 text-purple-400 ring-1 ring-purple-500/20"
-                      }`}>
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
+                          agent.strategy === "Bot"
+                            ? "bg-cyan-500/10 text-cyan-400 ring-1 ring-cyan-500/20"
+                            : "bg-purple-500/10 text-purple-400 ring-1 ring-purple-500/20"
+                        }`}
+                      >
                         {agent.strategy}
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-right">
-                      <span className="font-mono font-bold text-emerald-400 text-sm">+{agent.roi}%</span>
+                      <span className="font-mono font-bold text-emerald-400 text-sm">
+                        +{agent.roi}%
+                      </span>
                     </td>
                     <td className="px-5 py-3.5 text-right">
-                      <span className="font-mono text-sm text-zinc-300">{agent.winRate}%</span>
+                      <span className="font-mono text-sm text-zinc-300">
+                        {agent.winRate}%
+                      </span>
                     </td>
                     <td className="px-5 py-3.5 text-right">
-                      <span className="font-mono text-sm text-red-400/80">{agent.maxDrawdown}%</span>
+                      <span className="font-mono text-sm text-red-400/80">
+                        {agent.maxDrawdown}%
+                      </span>
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex justify-center">
-                        <MiniSparkline data={agent.sparkline} positive={agent.roi > 0} />
+                        <MiniSparkline
+                          data={agent.sparkline}
+                          positive={agent.roi > 0}
+                        />
                       </div>
                     </td>
                     <td className="px-5 py-3.5 text-right">
-                      <span className="text-sm text-zinc-400 font-medium">{agent.copiers}</span>
+                      <span className="text-sm text-zinc-400 font-medium">
+                        {agent.copiers}
+                      </span>
                     </td>
                     <td className="px-5 py-3.5">
-                      <Button variant="ghost" size="sm" className="text-xs text-zinc-400 hover:text-emerald-400">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-zinc-400 hover:text-emerald-400"
+                      >
                         <Copy className="h-3 w-3 mr-1" />
                         Copy
                       </Button>
@@ -307,24 +360,37 @@ export function Arena() {
                 <div className="flex items-center gap-3">
                   <RankBadge rank={agent.rank} />
                   <div>
-                    <p className="font-semibold text-white text-sm">{agent.name}</p>
+                    <p className="font-semibold text-white text-sm">
+                      {agent.name}
+                    </p>
                     <p className="text-xs text-zinc-600">{agent.creator}</p>
                   </div>
                 </div>
-                <MiniSparkline data={agent.sparkline} positive={agent.roi > 0} />
+                <MiniSparkline
+                  data={agent.sparkline}
+                  positive={agent.roi > 0}
+                />
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="rounded-lg bg-zinc-800/30 py-2">
                   <p className="text-[10px] text-zinc-500 uppercase">ROI</p>
-                  <p className="font-mono text-sm font-bold text-emerald-400">+{agent.roi}%</p>
+                  <p className="font-mono text-sm font-bold text-emerald-400">
+                    +{agent.roi}%
+                  </p>
                 </div>
                 <div className="rounded-lg bg-zinc-800/30 py-2">
-                  <p className="text-[10px] text-zinc-500 uppercase">Win Rate</p>
-                  <p className="font-mono text-sm text-zinc-300">{agent.winRate}%</p>
+                  <p className="text-[10px] text-zinc-500 uppercase">
+                    Win Rate
+                  </p>
+                  <p className="font-mono text-sm text-zinc-300">
+                    {agent.winRate}%
+                  </p>
                 </div>
                 <div className="rounded-lg bg-zinc-800/30 py-2">
                   <p className="text-[10px] text-zinc-500 uppercase">Copiers</p>
-                  <p className="text-sm text-zinc-300 font-medium">{agent.copiers}</p>
+                  <p className="text-sm text-zinc-300 font-medium">
+                    {agent.copiers}
+                  </p>
                 </div>
               </div>
             </motion.div>

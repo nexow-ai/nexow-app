@@ -12,7 +12,13 @@ const sizeMap = {
   lg: { height: 40 },
 };
 
-function NexowSVG({ height, color = "currentColor" }: { height: number; color?: string }) {
+function NexowSVG({
+  height,
+  color = "currentColor",
+}: {
+  height: number;
+  color?: string;
+}) {
   const aspect = 1271 / 772;
   const width = Math.round(height * aspect);
 

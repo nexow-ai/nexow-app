@@ -14,7 +14,9 @@ export function useEvaluations(agentId?: string) {
   const fetchEvaluations = useCallback(async () => {
     if (!agentId) return;
     setLoading(true);
-    const res = await fetch(`/api/evaluations?agentId=${encodeURIComponent(agentId)}`);
+    const res = await fetch(
+      `/api/evaluations?agentId=${encodeURIComponent(agentId)}`
+    );
     const data = await res.json();
     if (!res.ok) {
       setError(data.error ?? "Failed to fetch evaluations");
@@ -57,8 +59,12 @@ export function useEvaluations(agentId?: string) {
     };
   }, [agentId]);
 
-  const totalTokens = evaluations.reduce((sum, e) => sum + (e.total_tokens ?? 0), 0);
-  const avgTokens = evaluations.length > 0 ? Math.round(totalTokens / evaluations.length) : 0;
+  const totalTokens = evaluations.reduce(
+    (sum, e) => sum + (e.total_tokens ?? 0),
+    0
+  );
+  const avgTokens =
+    evaluations.length > 0 ? Math.round(totalTokens / evaluations.length) : 0;
 
   return {
     evaluations,

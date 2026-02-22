@@ -12,21 +12,111 @@ interface Instrument {
 }
 
 const instruments: Instrument[] = [
-  { symbol: "EUR/USD", price: 1.0847, change: 0.12, category: "FX", categoryColor: "text-emerald-400" },
-  { symbol: "GBP/JPY", price: 191.432, change: -0.34, category: "FX", categoryColor: "text-emerald-400" },
-  { symbol: "USD/CHF", price: 0.8821, change: 0.08, category: "FX", categoryColor: "text-emerald-400" },
-  { symbol: "SPX500", price: 6083.57, change: 0.67, category: "Index", categoryColor: "text-blue-400" },
-  { symbol: "NAS100", price: 21842.63, change: 1.12, category: "Index", categoryColor: "text-blue-400" },
-  { symbol: "DE40", price: 22012.88, change: 0.43, category: "Index", categoryColor: "text-blue-400" },
-  { symbol: "XAU/USD", price: 2937.45, change: 0.89, category: "Commodity", categoryColor: "text-amber-400" },
-  { symbol: "XTI/USD", price: 71.23, change: -1.42, category: "Commodity", categoryColor: "text-amber-400" },
-  { symbol: "XAG/USD", price: 32.87, change: 1.23, category: "Commodity", categoryColor: "text-amber-400" },
-  { symbol: "AAPL", price: 227.63, change: 0.54, category: "Stock", categoryColor: "text-purple-400" },
-  { symbol: "TSLA", price: 352.89, change: 2.31, category: "Stock", categoryColor: "text-purple-400" },
-  { symbol: "NVDA", price: 131.28, change: 1.87, category: "Stock", categoryColor: "text-purple-400" },
-  { symbol: "BTC/USD", price: 97423.50, change: 3.21, category: "Crypto", categoryColor: "text-orange-400" },
-  { symbol: "ETH/USD", price: 2681.42, change: 2.14, category: "Crypto", categoryColor: "text-orange-400" },
-  { symbol: "SOL/USD", price: 198.73, change: 4.56, category: "Crypto", categoryColor: "text-orange-400" },
+  {
+    symbol: "EUR/USD",
+    price: 1.0847,
+    change: 0.12,
+    category: "FX",
+    categoryColor: "text-emerald-400",
+  },
+  {
+    symbol: "GBP/JPY",
+    price: 191.432,
+    change: -0.34,
+    category: "FX",
+    categoryColor: "text-emerald-400",
+  },
+  {
+    symbol: "USD/CHF",
+    price: 0.8821,
+    change: 0.08,
+    category: "FX",
+    categoryColor: "text-emerald-400",
+  },
+  {
+    symbol: "SPX500",
+    price: 6083.57,
+    change: 0.67,
+    category: "Index",
+    categoryColor: "text-blue-400",
+  },
+  {
+    symbol: "NAS100",
+    price: 21842.63,
+    change: 1.12,
+    category: "Index",
+    categoryColor: "text-blue-400",
+  },
+  {
+    symbol: "DE40",
+    price: 22012.88,
+    change: 0.43,
+    category: "Index",
+    categoryColor: "text-blue-400",
+  },
+  {
+    symbol: "XAU/USD",
+    price: 2937.45,
+    change: 0.89,
+    category: "Commodity",
+    categoryColor: "text-amber-400",
+  },
+  {
+    symbol: "XTI/USD",
+    price: 71.23,
+    change: -1.42,
+    category: "Commodity",
+    categoryColor: "text-amber-400",
+  },
+  {
+    symbol: "XAG/USD",
+    price: 32.87,
+    change: 1.23,
+    category: "Commodity",
+    categoryColor: "text-amber-400",
+  },
+  {
+    symbol: "AAPL",
+    price: 227.63,
+    change: 0.54,
+    category: "Stock",
+    categoryColor: "text-purple-400",
+  },
+  {
+    symbol: "TSLA",
+    price: 352.89,
+    change: 2.31,
+    category: "Stock",
+    categoryColor: "text-purple-400",
+  },
+  {
+    symbol: "NVDA",
+    price: 131.28,
+    change: 1.87,
+    category: "Stock",
+    categoryColor: "text-purple-400",
+  },
+  {
+    symbol: "BTC/USD",
+    price: 97423.5,
+    change: 3.21,
+    category: "Crypto",
+    categoryColor: "text-orange-400",
+  },
+  {
+    symbol: "ETH/USD",
+    price: 2681.42,
+    change: 2.14,
+    category: "Crypto",
+    categoryColor: "text-orange-400",
+  },
+  {
+    symbol: "SOL/USD",
+    price: 198.73,
+    change: 4.56,
+    category: "Crypto",
+    categoryColor: "text-orange-400",
+  },
 ];
 
 function TickerCard({ instrument }: { instrument: Instrument }) {
@@ -50,15 +140,21 @@ function TickerCard({ instrument }: { instrument: Instrument }) {
   return (
     <div className="flex-shrink-0 w-[200px] rounded-xl border border-zinc-800/50 bg-zinc-900/50 p-4 backdrop-blur-sm transition-all duration-300 hover:border-zinc-700/60 hover:bg-zinc-900/70 hover:shadow-lg hover:shadow-black/10">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-bold text-white">{instrument.symbol}</span>
-        <span className={`text-[10px] font-semibold uppercase tracking-wider ${instrument.categoryColor}`}>
+        <span className="text-sm font-bold text-white">
+          {instrument.symbol}
+        </span>
+        <span
+          className={`text-[10px] font-semibold uppercase tracking-wider ${instrument.categoryColor}`}
+        >
           {instrument.category}
         </span>
       </div>
       <p className="text-lg font-mono font-semibold text-zinc-100 tabular-nums">
         {formatPrice(displayPrice)}
       </p>
-      <p className={`mt-1 text-xs font-semibold tabular-nums ${instrument.change >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+      <p
+        className={`mt-1 text-xs font-semibold tabular-nums ${instrument.change >= 0 ? "text-emerald-400" : "text-red-400"}`}
+      >
         {instrument.change >= 0 ? "+" : ""}
         {instrument.change.toFixed(2)}%
       </p>

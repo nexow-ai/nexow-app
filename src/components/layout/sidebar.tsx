@@ -66,10 +66,14 @@ export function Sidebar() {
               {isActive && (
                 <div className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-emerald-500" />
               )}
-              <item.icon className={cn(
-                "h-[18px] w-[18px] transition-colors",
-                isActive ? "text-emerald-400" : "text-zinc-600 group-hover:text-zinc-400"
-              )} />
+              <item.icon
+                className={cn(
+                  "h-[18px] w-[18px] transition-colors",
+                  isActive
+                    ? "text-emerald-400"
+                    : "text-zinc-600 group-hover:text-zinc-400"
+                )}
+              />
               {item.name}
             </Link>
           );

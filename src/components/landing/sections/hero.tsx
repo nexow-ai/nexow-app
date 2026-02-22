@@ -130,8 +130,8 @@ export function Hero() {
             style={{ y: textY, opacity: textOpacity }}
             className="mt-8 max-w-xl text-lg leading-relaxed text-zinc-400 sm:text-xl"
           >
-            Build trading bots and agents with plain English.
-            Trade FX, Indices, Commodities, Stocks, and Crypto — 24 hours, 5 days a week.
+            Build trading bots and agents with plain English. Trade FX, Indices,
+            Commodities, Stocks, and Crypto — 24 hours, 5 days a week.
           </motion.p>
 
           {/* CTAs */}
@@ -149,7 +149,11 @@ export function Hero() {
               </Button>
             </Link>
             <Link href="#arena">
-              <Button variant="outline" size="lg" className="min-w-[200px] text-base">
+              <Button
+                variant="outline"
+                size="lg"
+                className="min-w-[200px] text-base"
+              >
                 Explore The Arena
               </Button>
             </Link>

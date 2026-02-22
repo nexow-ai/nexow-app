@@ -19,7 +19,8 @@ const MODELS: LLMModel[] = [
     id: "gpt-4o-mini",
     provider: "openai",
     name: "GPT-4o Mini",
-    description: "Fast and cost-effective. Great for high-frequency evaluation schedules.",
+    description:
+      "Fast and cost-effective. Great for high-frequency evaluation schedules.",
     speed: 5,
     intelligence: 3,
     cost: 1,
@@ -29,7 +30,8 @@ const MODELS: LLMModel[] = [
     id: "gpt-4o",
     provider: "openai",
     name: "GPT-4o",
-    description: "More capable reasoning. Better for complex multi-factor strategies.",
+    description:
+      "More capable reasoning. Better for complex multi-factor strategies.",
     speed: 3,
     intelligence: 5,
     cost: 3,
@@ -38,14 +40,23 @@ const MODELS: LLMModel[] = [
     id: "claude-sonnet-4-20250514",
     provider: "anthropic",
     name: "Claude Sonnet",
-    description: "Strong analytical reasoning. Excels at nuanced market interpretation.",
+    description:
+      "Strong analytical reasoning. Excels at nuanced market interpretation.",
     speed: 3,
     intelligence: 5,
     cost: 3,
   },
 ];
 
-function RatingDots({ value, max = 5, color }: { value: number; max?: number; color: string }) {
+function RatingDots({
+  value,
+  max = 5,
+  color,
+}: {
+  value: number;
+  max?: number;
+  color: string;
+}) {
   return (
     <div className="flex gap-0.5">
       {Array.from({ length: max }, (_, i) => (
@@ -67,11 +78,16 @@ interface ModelSelectorProps {
   onSelect: (provider: string, model: string) => void;
 }
 
-export function ModelSelector({ selectedProvider, selectedModel, onSelect }: ModelSelectorProps) {
+export function ModelSelector({
+  selectedProvider,
+  selectedModel,
+  onSelect,
+}: ModelSelectorProps) {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
       {MODELS.map((model) => {
-        const isSelected = selectedProvider === model.provider && selectedModel === model.id;
+        const isSelected =
+          selectedProvider === model.provider && selectedModel === model.id;
         return (
           <button
             key={model.id}
@@ -101,13 +117,28 @@ export function ModelSelector({ selectedProvider, selectedModel, onSelect }: Mod
                   )}
                 >
                   {model.provider === "openai" ? (
-                    <Sparkles className={cn("h-4 w-4", isSelected ? "text-purple-400" : "text-zinc-400")} />
+                    <Sparkles
+                      className={cn(
+                        "h-4 w-4",
+                        isSelected ? "text-purple-400" : "text-zinc-400"
+                      )}
+                    />
                   ) : (
-                    <Brain className={cn("h-4 w-4", isSelected ? "text-purple-400" : "text-zinc-400")} />
+                    <Brain
+                      className={cn(
+                        "h-4 w-4",
+                        isSelected ? "text-purple-400" : "text-zinc-400"
+                      )}
+                    />
                   )}
                 </div>
                 <div>
-                  <p className={cn("text-sm font-semibold", isSelected ? "text-purple-200" : "text-zinc-200")}>
+                  <p
+                    className={cn(
+                      "text-sm font-semibold",
+                      isSelected ? "text-purple-200" : "text-zinc-200"
+                    )}
+                  >
                     {model.name}
                   </p>
                   <p className="text-[10px] uppercase tracking-wider text-zinc-600">

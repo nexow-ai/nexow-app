@@ -48,7 +48,7 @@ export function Header() {
           <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-emerald-400 via-cyan-400 to-purple-400 shadow-lg shadow-emerald-500/10" />
           <div className="hidden sm:block">
             <p className="text-sm font-medium text-zinc-200 group-hover:text-zinc-100 transition-colors">
-              {profileLoading ? "..." : username ?? "User"}
+              {profileLoading ? "..." : (username ?? "User")}
             </p>
             <p className="text-[11px] text-zinc-600">
               {loading ? "..." : `${plan.name} Plan`}

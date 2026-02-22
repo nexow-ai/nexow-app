@@ -22,7 +22,8 @@ const STYLES: StyleOption[] = [
     id: "conservative",
     label: "Conservative",
     description: "High confidence only",
-    detail: "Fewer trades, strictly risk-averse. Only acts on strong conviction signals above 70% confidence.",
+    detail:
+      "Fewer trades, strictly risk-averse. Only acts on strong conviction signals above 70% confidence.",
     icon: Shield,
     color: "text-blue-400",
     selectedBorder: "border-blue-500/50",
@@ -33,7 +34,8 @@ const STYLES: StyleOption[] = [
     id: "balanced",
     label: "Balanced",
     description: "Moderate confidence",
-    detail: "Balanced approach between risk and reward. Takes trades with 50%+ confidence when analysis aligns.",
+    detail:
+      "Balanced approach between risk and reward. Takes trades with 50%+ confidence when analysis aligns.",
     icon: Scale,
     color: "text-purple-400",
     selectedBorder: "border-purple-500/50",
@@ -44,7 +46,8 @@ const STYLES: StyleOption[] = [
     id: "aggressive",
     label: "Aggressive",
     description: "Lower threshold",
-    detail: "More frequent trades with 30%+ confidence. Higher risk tolerance, captures more opportunities.",
+    detail:
+      "More frequent trades with 30%+ confidence. Higher risk tolerance, captures more opportunities.",
     icon: Flame,
     color: "text-amber-400",
     selectedBorder: "border-amber-500/50",
@@ -58,7 +61,10 @@ interface TradingStyleSelectorProps {
   onSelect: (style: TradingStyle) => void;
 }
 
-export function TradingStyleSelector({ selected, onSelect }: TradingStyleSelectorProps) {
+export function TradingStyleSelector({
+  selected,
+  onSelect,
+}: TradingStyleSelectorProps) {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
       {STYLES.map((style) => {
@@ -86,24 +92,48 @@ export function TradingStyleSelector({ selected, onSelect }: TradingStyleSelecto
                       : "border-zinc-700/40 bg-zinc-800/50"
                   )}
                 >
-                  <Icon className={cn("h-4 w-4", isSelected ? style.iconColor : "text-zinc-500")} />
+                  <Icon
+                    className={cn(
+                      "h-4 w-4",
+                      isSelected ? style.iconColor : "text-zinc-500"
+                    )}
+                  />
                 </div>
                 <div>
-                  <p className={cn("text-sm font-semibold", isSelected ? "text-zinc-100" : "text-zinc-300")}>
+                  <p
+                    className={cn(
+                      "text-sm font-semibold",
+                      isSelected ? "text-zinc-100" : "text-zinc-300"
+                    )}
+                  >
                     {style.label}
                   </p>
-                  <p className={cn("text-[10px]", isSelected ? style.color : "text-zinc-600")}>
+                  <p
+                    className={cn(
+                      "text-[10px]",
+                      isSelected ? style.color : "text-zinc-600"
+                    )}
+                  >
                     {style.description}
                   </p>
                 </div>
               </div>
               {isSelected && (
-                <div className={cn("flex h-5 w-5 items-center justify-center rounded-full", style.selectedBg, style.selectedBorder, "border")}>
+                <div
+                  className={cn(
+                    "flex h-5 w-5 items-center justify-center rounded-full",
+                    style.selectedBg,
+                    style.selectedBorder,
+                    "border"
+                  )}
+                >
                   <Check className={cn("h-3 w-3", style.color)} />
                 </div>
               )}
             </div>
-            <p className="text-xs leading-relaxed text-zinc-500">{style.detail}</p>
+            <p className="text-xs leading-relaxed text-zinc-500">
+              {style.detail}
+            </p>
           </button>
         );
       })}

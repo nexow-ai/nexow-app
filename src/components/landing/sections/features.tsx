@@ -114,10 +114,14 @@ export function Features() {
               <div
                 className={`relative overflow-hidden rounded-2xl border border-zinc-800/50 bg-zinc-900/40 p-7 backdrop-blur-sm transition-all duration-300 hover:bg-zinc-900/60 hover:shadow-xl ${feature.hoverBorder} ${feature.hoverShadow}`}
               >
-                <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 transition-opacity duration-300 group-hover:opacity-100`} />
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 transition-opacity duration-300 group-hover:opacity-100`}
+                />
 
                 <div className="relative">
-                  <div className={`mb-5 inline-flex rounded-xl border p-3.5 ${feature.iconBg} transition-transform duration-300 group-hover:scale-110`}>
+                  <div
+                    className={`mb-5 inline-flex rounded-xl border p-3.5 ${feature.iconBg} transition-transform duration-300 group-hover:scale-110`}
+                  >
                     <feature.icon className={`h-6 w-6 ${feature.iconColor}`} />
                   </div>
                   <h3 className="mb-2.5 text-lg font-semibold text-white">

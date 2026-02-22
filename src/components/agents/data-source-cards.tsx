@@ -22,37 +22,43 @@ const DATA_SOURCES: DataSource[] = [
   {
     id: "technical_analysis",
     label: "Technical Analysis",
-    description: "RSI, MACD, Bollinger Bands, moving averages on your timeframes",
+    description:
+      "RSI, MACD, Bollinger Bands, moving averages on your timeframes",
     icon: BarChart3,
   },
   {
     id: "news_sentiment",
     label: "News Sentiment",
-    description: "Real-time financial headlines scored for bullish/bearish sentiment",
+    description:
+      "Real-time financial headlines scored for bullish/bearish sentiment",
     icon: Newspaper,
   },
   {
     id: "economic_calendar",
     label: "Economic Calendar",
-    description: "Upcoming events: NFP, CPI, interest rate decisions and impacts",
+    description:
+      "Upcoming events: NFP, CPI, interest rate decisions and impacts",
     icon: CalendarClock,
   },
   {
     id: "web_search",
     label: "Web Search",
-    description: "Live web research for market analysis, commentary and outlooks",
+    description:
+      "Live web research for market analysis, commentary and outlooks",
     icon: Globe,
   },
   {
     id: "price_action",
     label: "Price Action",
-    description: "Raw candlestick patterns, support/resistance levels, key zones",
+    description:
+      "Raw candlestick patterns, support/resistance levels, key zones",
     icon: Activity,
   },
   {
     id: "order_flow",
     label: "Order Flow / COT",
-    description: "Commitment of Traders positioning data and institutional flows",
+    description:
+      "Commitment of Traders positioning data and institutional flows",
     icon: Radio,
   },
 ];

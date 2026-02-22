@@ -18,7 +18,10 @@ export function CTA() {
   return (
     <section ref={sectionRef} className="relative py-32">
       {/* Background glow with parallax scale */}
-      <motion.div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ scale: glowScale }}>
+      <motion.div
+        className="absolute inset-0 overflow-hidden pointer-events-none"
+        style={{ scale: glowScale }}
+      >
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[500px] w-[800px] rounded-full bg-emerald-500/[0.07] blur-[120px]" />
         <div className="absolute left-1/3 top-1/3 h-[300px] w-[300px] rounded-full bg-cyan-500/[0.04] blur-[100px]" />
       </motion.div>

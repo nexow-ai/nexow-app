@@ -90,13 +90,19 @@ export function HowItWorks() {
               transition={{ duration: 0.6, delay: 0.2 + 0.15 * i }}
               className="group relative"
             >
-              <div className={`relative rounded-2xl border border-zinc-800/50 bg-zinc-900/40 p-8 backdrop-blur-sm transition-all duration-300 hover:bg-zinc-900/60 hover:shadow-xl ${step.glowColor} ${step.borderHover}`}>
+              <div
+                className={`relative rounded-2xl border border-zinc-800/50 bg-zinc-900/40 p-8 backdrop-blur-sm transition-all duration-300 hover:bg-zinc-900/60 hover:shadow-xl ${step.glowColor} ${step.borderHover}`}
+              >
                 {/* Large number watermark */}
-                <span className={`absolute top-4 right-6 text-7xl font-black select-none ${step.numColor}`}>
+                <span
+                  className={`absolute top-4 right-6 text-7xl font-black select-none ${step.numColor}`}
+                >
                   {step.number}
                 </span>
 
-                <div className={`mb-5 inline-flex rounded-xl border p-3 ${step.iconBg} transition-transform duration-300 group-hover:scale-110`}>
+                <div
+                  className={`mb-5 inline-flex rounded-xl border p-3 ${step.iconBg} transition-transform duration-300 group-hover:scale-110`}
+                >
                   <step.icon className={`h-6 w-6 ${step.iconColor}`} />
                 </div>
                 <h3 className="mb-3 text-xl font-semibold text-white">

@@ -21,7 +21,11 @@ type Evaluation = Database["public"]["Tables"]["agent_evaluations"]["Row"];
 
 const ACTION_STYLES: Record<
   string,
-  { label: string; variant: "success" | "danger" | "default" | "info"; bg: string }
+  {
+    label: string;
+    variant: "success" | "danger" | "default" | "info";
+    bg: string;
+  }
 > = {
   buy: { label: "BUY", variant: "success", bg: "border-l-emerald-500" },
   sell: { label: "SELL", variant: "danger", bg: "border-l-red-500" },
@@ -70,7 +74,11 @@ function ConfidenceBar({ value }: { value: number }) {
         <div
           className={cn(
             "h-full rounded-full transition-all",
-            pct >= 70 ? "bg-emerald-500" : pct >= 40 ? "bg-amber-500" : "bg-zinc-600"
+            pct >= 70
+              ? "bg-emerald-500"
+              : pct >= 40
+                ? "bg-amber-500"
+                : "bg-zinc-600"
           )}
           style={{ width: `${pct}%` }}
         />
@@ -152,9 +160,7 @@ function EvaluationCard({ evaluation }: { evaluation: Evaluation }) {
           )}
 
           <div className="flex items-center gap-4 text-[10px] text-zinc-600">
-            {evaluation.llm_model && (
-              <span>{evaluation.llm_model}</span>
-            )}
+            {evaluation.llm_model && <span>{evaluation.llm_model}</span>}
             {evaluation.duration_ms != null && (
               <span className="flex items-center gap-0.5">
                 <Clock className="h-2.5 w-2.5" />
@@ -163,7 +169,8 @@ function EvaluationCard({ evaluation }: { evaluation: Evaluation }) {
             )}
             {evaluation.prompt_tokens > 0 && (
               <span>
-                {evaluation.prompt_tokens}p / {evaluation.completion_tokens}c tokens
+                {evaluation.prompt_tokens}p / {evaluation.completion_tokens}c
+                tokens
               </span>
             )}
           </div>
@@ -179,16 +186,17 @@ function EvaluationCard({ evaluation }: { evaluation: Evaluation }) {
             </details>
           )}
 
-          {evaluation.sentiment_summary && evaluation.sentiment_summary !== "No external data available." && (
-            <details className="rounded-lg border border-zinc-800/30 bg-zinc-900/30">
-              <summary className="cursor-pointer px-2.5 py-1.5 text-[10px] font-medium text-zinc-600 hover:text-zinc-400">
-                Sentiment Analysis
-              </summary>
-              <pre className="whitespace-pre-wrap px-2.5 pb-2 text-[10px] text-zinc-500">
-                {evaluation.sentiment_summary}
-              </pre>
-            </details>
-          )}
+          {evaluation.sentiment_summary &&
+            evaluation.sentiment_summary !== "No external data available." && (
+              <details className="rounded-lg border border-zinc-800/30 bg-zinc-900/30">
+                <summary className="cursor-pointer px-2.5 py-1.5 text-[10px] font-medium text-zinc-600 hover:text-zinc-400">
+                  Sentiment Analysis
+                </summary>
+                <pre className="whitespace-pre-wrap px-2.5 pb-2 text-[10px] text-zinc-500">
+                  {evaluation.sentiment_summary}
+                </pre>
+              </details>
+            )}
         </div>
       )}
     </div>
@@ -201,7 +209,11 @@ interface DecisionTimelineProps {
   className?: string;
 }
 
-export function DecisionTimeline({ evaluations, loading, className }: DecisionTimelineProps) {
+export function DecisionTimeline({
+  evaluations,
+  loading,
+  className,
+}: DecisionTimelineProps) {
   if (loading) {
     return (
       <div className={cn("flex items-center justify-center py-8", className)}>
@@ -212,7 +224,12 @@ export function DecisionTimeline({ evaluations, loading, className }: DecisionTi
 
   if (evaluations.length === 0) {
     return (
-      <div className={cn("flex flex-col items-center justify-center py-8 text-center", className)}>
+      <div
+        className={cn(
+          "flex flex-col items-center justify-center py-8 text-center",
+          className
+        )}
+      >
         <p className="text-xs text-zinc-600">No evaluations yet.</p>
         <p className="mt-1 text-[10px] text-zinc-700">
           Decisions will appear here as the agent evaluates the market.

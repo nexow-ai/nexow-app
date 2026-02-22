@@ -31,7 +31,8 @@ export function Footer() {
           <div className="col-span-2 md:col-span-1">
             <Logo size="md" />
             <p className="mt-4 text-sm text-zinc-600 leading-relaxed max-w-xs">
-              The agentic social trading platform. Build, compete, and earn with AI-powered trading agents.
+              The agentic social trading platform. Build, compete, and earn with
+              AI-powered trading agents.
             </p>
           </div>
 
@@ -63,8 +64,9 @@ export function Footer() {
             &copy; 2025 Nexow. All rights reserved.
           </p>
           <p className="text-[10px] text-zinc-800 max-w-md text-center sm:text-right">
-            Trading involves risk. Past performance is not indicative of future results.
-            This platform is for educational and informational purposes.
+            Trading involves risk. Past performance is not indicative of future
+            results. This platform is for educational and informational
+            purposes.
           </p>
         </div>
       </div>

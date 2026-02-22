@@ -45,7 +45,12 @@ export interface BacktestResult {
   equity_curve: EquityPoint[];
 }
 
-export type BacktestPhase = "idle" | "fetching" | "simulating" | "complete" | "error";
+export type BacktestPhase =
+  | "idle"
+  | "fetching"
+  | "simulating"
+  | "complete"
+  | "error";
 
 export interface BacktestState {
   phase: BacktestPhase;
@@ -59,7 +64,10 @@ export interface BacktestState {
 interface BacktestRequestPayload {
   config: Record<string, unknown>;
   instruments: { instrument: string; timeframe: string }[];
-  exit_config: { stop_loss_pct?: number | null; take_profit_pct?: number | null };
+  exit_config: {
+    stop_loss_pct?: number | null;
+    take_profit_pct?: number | null;
+  };
   period_start: string;
   period_end: string;
 }

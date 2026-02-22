@@ -72,8 +72,8 @@ export function BacktestPanel({
                 Backtest Your Strategy
               </h2>
               <p className="text-sm text-zinc-500">
-                Simulate the last 365 days of market data to see how your
-                agent would have performed
+                Simulate the last 365 days of market data to see how your agent
+                would have performed
               </p>
             </div>
           </div>
@@ -81,7 +81,9 @@ export function BacktestPanel({
       </div>
 
       {/* Idle state */}
-      {state.phase === "idle" && <IdleState onRun={onRunBacktest} onBack={onBack} />}
+      {state.phase === "idle" && (
+        <IdleState onRun={onRunBacktest} onBack={onBack} />
+      )}
 
       {/* Running state — live equity curve */}
       {(state.phase === "fetching" || state.phase === "simulating") && (
@@ -90,7 +92,11 @@ export function BacktestPanel({
 
       {/* Error state */}
       {state.phase === "error" && (
-        <ErrorState message={state.message} onRetry={onRunBacktest} onBack={onBack} />
+        <ErrorState
+          message={state.message}
+          onRetry={onRunBacktest}
+          onBack={onBack}
+        />
       )}
 
       {/* Results */}
@@ -110,7 +116,13 @@ export function BacktestPanel({
 // Idle state — CTA to run backtest
 // ------------------------------------------------------------------
 
-function IdleState({ onRun, onBack }: { onRun: () => void; onBack: () => void }) {
+function IdleState({
+  onRun,
+  onBack,
+}: {
+  onRun: () => void;
+  onBack: () => void;
+}) {
   return (
     <Card className="flex flex-col items-center justify-center py-16">
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-400">
@@ -141,7 +153,13 @@ function IdleState({ onRun, onBack }: { onRun: () => void; onBack: () => void })
 // Simulation view — live equity curve instead of boring progress bar
 // ------------------------------------------------------------------
 
-function SimulationView({ state, onCancel }: { state: BacktestState; onCancel: () => void }) {
+function SimulationView({
+  state,
+  onCancel,
+}: {
+  state: BacktestState;
+  onCancel: () => void;
+}) {
   const hasEquityData = state.liveEquityCurve.length > 0;
 
   return (
@@ -219,7 +237,9 @@ function ErrorState({
     <Card className="flex flex-col items-center justify-center py-16">
       <XCircle className="h-10 w-10 text-red-400" />
       <h3 className="mt-4 text-lg font-semibold text-white">Backtest Failed</h3>
-      <p className="mt-2 max-w-md text-center text-sm text-zinc-500">{message}</p>
+      <p className="mt-2 max-w-md text-center text-sm text-zinc-500">
+        {message}
+      </p>
       <div className="mt-6 flex items-center gap-3">
         <Button variant="outline" size="sm" onClick={onBack}>
           <ArrowLeft className="h-4 w-4" />
@@ -278,7 +298,9 @@ function ResultsView({
         />
         <StatCard
           label="Profit Factor"
-          value={stats.profit_factor >= 999 ? "inf" : stats.profit_factor.toFixed(2)}
+          value={
+            stats.profit_factor >= 999 ? "inf" : stats.profit_factor.toFixed(2)
+          }
           variant={stats.profit_factor >= 1.5 ? "positive" : "neutral"}
           icon={<BarChart3 className="h-4 w-4" />}
         />
@@ -324,7 +346,6 @@ function ResultsView({
           <TradeTable trades={trades} />
         </CardContent>
       </Card>
-
     </div>
   );
 }
@@ -358,7 +379,9 @@ function StatCard({
           {label}
         </p>
       </div>
-      <p className={`mt-1.5 text-lg font-bold tracking-tight ${colorMap[variant]}`}>
+      <p
+        className={`mt-1.5 text-lg font-bold tracking-tight ${colorMap[variant]}`}
+      >
         {value}
       </p>
     </div>
@@ -369,14 +392,14 @@ function StatCard({
 // Live equity curve chart — appends data incrementally during sim
 // ------------------------------------------------------------------
 
-function LiveEquityCurveChart({
-  data,
-}: {
-  data: EquityPoint[];
-}) {
+function LiveEquityCurveChart({ data }: { data: EquityPoint[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<ReturnType<typeof import("lightweight-charts").createChart> | null>(null);
-  const seriesRef = useRef<ReturnType<ReturnType<typeof import("lightweight-charts").createChart>["addSeries"]> | null>(null);
+  const chartRef = useRef<ReturnType<
+    typeof import("lightweight-charts").createChart
+  > | null>(null);
+  const seriesRef = useRef<ReturnType<
+    ReturnType<typeof import("lightweight-charts").createChart>["addSeries"]
+  > | null>(null);
 
   // Initialize chart once
   useEffect(() => {
@@ -385,9 +408,8 @@ function LiveEquityCurveChart({
     let cancelled = false;
 
     const init = async () => {
-      const { createChart, AreaSeries, ColorType } = await import(
-        "lightweight-charts"
-      );
+      const { createChart, AreaSeries, ColorType } =
+        await import("lightweight-charts");
 
       if (cancelled || !containerRef.current) return;
 
@@ -433,7 +455,9 @@ function LiveEquityCurveChart({
 
       const resizeObserver = new ResizeObserver(() => {
         if (chartRef.current && containerRef.current) {
-          chartRef.current.applyOptions({ width: containerRef.current.clientWidth });
+          chartRef.current.applyOptions({
+            width: containerRef.current.clientWidth,
+          });
         }
       });
       resizeObserver.observe(containerRef.current);
@@ -458,7 +482,9 @@ function LiveEquityCurveChart({
 
     const chartData = data
       .map((d) => ({
-        time: Math.floor(new Date(d.time).getTime() / 1000) as import("lightweight-charts").Time,
+        time: Math.floor(
+          new Date(d.time).getTime() / 1000
+        ) as import("lightweight-charts").Time,
         value: d.equity,
       }))
       .sort((a, b) => (a.time as number) - (b.time as number));
@@ -467,20 +493,20 @@ function LiveEquityCurveChart({
     chartRef.current.timeScale().fitContent();
   }, [data]);
 
-  return <div ref={containerRef} className="h-[300px] w-full overflow-hidden" />;
+  return (
+    <div ref={containerRef} className="h-[300px] w-full overflow-hidden" />
+  );
 }
 
 // ------------------------------------------------------------------
 // Static equity curve chart (for final results)
 // ------------------------------------------------------------------
 
-function EquityCurveChart({
-  data,
-}: {
-  data: EquityPoint[];
-}) {
+function EquityCurveChart({ data }: { data: EquityPoint[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<ReturnType<typeof import("lightweight-charts").createChart> | null>(null);
+  const chartRef = useRef<ReturnType<
+    typeof import("lightweight-charts").createChart
+  > | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || data.length === 0) return;
@@ -488,9 +514,8 @@ function EquityCurveChart({
     let cancelled = false;
 
     const init = async () => {
-      const { createChart, AreaSeries, ColorType } = await import(
-        "lightweight-charts"
-      );
+      const { createChart, AreaSeries, ColorType } =
+        await import("lightweight-charts");
 
       if (cancelled || !containerRef.current) return;
 
@@ -535,7 +560,9 @@ function EquityCurveChart({
 
       const sorted = data
         .map((d) => ({
-          time: Math.floor(new Date(d.time).getTime() / 1000) as import("lightweight-charts").Time,
+          time: Math.floor(
+            new Date(d.time).getTime() / 1000
+          ) as import("lightweight-charts").Time,
           value: d.equity,
         }))
         .sort((a, b) => (a.time as number) - (b.time as number));
@@ -551,7 +578,9 @@ function EquityCurveChart({
 
       const resizeObserver = new ResizeObserver(() => {
         if (chartRef.current && containerRef.current) {
-          chartRef.current.applyOptions({ width: containerRef.current.clientWidth });
+          chartRef.current.applyOptions({
+            width: containerRef.current.clientWidth,
+          });
         }
       });
       resizeObserver.observe(containerRef.current);
@@ -569,7 +598,9 @@ function EquityCurveChart({
     };
   }, [data]);
 
-  return <div ref={containerRef} className="h-[300px] w-full overflow-hidden" />;
+  return (
+    <div ref={containerRef} className="h-[300px] w-full overflow-hidden" />
+  );
 }
 
 // ------------------------------------------------------------------
@@ -640,7 +671,8 @@ function TradeTable({ trades }: { trades: BacktestTrade[] }) {
                 )}
               </TableCell>
               <TableCell className="text-xs text-zinc-500">
-                {trade.stop_loss_pct != null || trade.take_profit_pct != null ? (
+                {trade.stop_loss_pct != null ||
+                trade.take_profit_pct != null ? (
                   <>
                     {trade.stop_loss_pct != null && (
                       <span className="text-red-400/70">
@@ -663,10 +695,10 @@ function TradeTable({ trades }: { trades: BacktestTrade[] }) {
               <TableCell className="text-xs text-zinc-500">
                 {trade.entry_time && trade.exit_time
                   ? formatDuration(
-                    (new Date(trade.exit_time).getTime() -
-                      new Date(trade.entry_time).getTime()) /
-                    3600000
-                  )
+                      (new Date(trade.exit_time).getTime() -
+                        new Date(trade.entry_time).getTime()) /
+                        3600000
+                    )
                   : "\u2014"}
               </TableCell>
             </TableRow>

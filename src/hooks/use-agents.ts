@@ -7,21 +7,19 @@ import { useSession } from "./use-session";
 type Agent = Database["public"]["Tables"]["agents"]["Row"];
 
 export function useAgents(typeFilter?: "bot" | "agent") {
-  const { user } = useSession();
+  const { user, loading: sessionLoading } = useSession();
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [fetching, setFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchAgents = useCallback(async () => {
     if (!user) {
       setAgents([]);
-      setLoading(false);
+      setFetching(false);
       return;
     }
-    setLoading(true);
-    const url = typeFilter
-      ? `/api/agents?type=${typeFilter}`
-      : "/api/agents";
+    setFetching(true);
+    const url = typeFilter ? `/api/agents?type=${typeFilter}` : "/api/agents";
     const res = await fetch(url);
     const data = await res.json();
     if (!res.ok) {
@@ -31,13 +29,15 @@ export function useAgents(typeFilter?: "bot" | "agent") {
       setError(null);
       setAgents(data.agents ?? data ?? []);
     }
-    setLoading(false);
+    setFetching(false);
   }, [user, typeFilter]);
 
   useEffect(() => {
+    if (sessionLoading) return;
     fetchAgents();
-  }, [fetchAgents]);
+  }, [sessionLoading, fetchAgents]);
 
+  const loading = sessionLoading || fetching;
   return { agents, loading, error, refetch: fetchAgents };
 }
 

@@ -84,8 +84,10 @@ export const PLANS: Plan[] = [
     description: "For active traders building their first strategies",
     price: 29,
     yearlyPrice: 288,
-    stripePriceIdMonthly: process.env.NEXT_PUBLIC_STRIPE_STARTER_MONTHLY_PRICE_ID ?? "",
-    stripePriceIdYearly: process.env.NEXT_PUBLIC_STRIPE_STARTER_YEARLY_PRICE_ID ?? "",
+    stripePriceIdMonthly:
+      process.env.NEXT_PUBLIC_STRIPE_STARTER_MONTHLY_PRICE_ID ?? "",
+    stripePriceIdYearly:
+      process.env.NEXT_PUBLIC_STRIPE_STARTER_YEARLY_PRICE_ID ?? "",
     limits: {
       maxBots: 10,
       maxAgents: 3,
@@ -102,8 +104,10 @@ export const PLANS: Plan[] = [
     description: "For serious traders running multiple strategies",
     price: 79,
     yearlyPrice: 792,
-    stripePriceIdMonthly: process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID ?? "",
-    stripePriceIdYearly: process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID ?? "",
+    stripePriceIdMonthly:
+      process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID ?? "",
+    stripePriceIdYearly:
+      process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID ?? "",
     popular: true,
     limits: {
       maxBots: 50,
@@ -121,8 +125,10 @@ export const PLANS: Plan[] = [
     description: "Unlimited power for professional quant traders",
     price: 199,
     yearlyPrice: 1_992,
-    stripePriceIdMonthly: process.env.NEXT_PUBLIC_STRIPE_ELITE_MONTHLY_PRICE_ID ?? "",
-    stripePriceIdYearly: process.env.NEXT_PUBLIC_STRIPE_ELITE_YEARLY_PRICE_ID ?? "",
+    stripePriceIdMonthly:
+      process.env.NEXT_PUBLIC_STRIPE_ELITE_MONTHLY_PRICE_ID ?? "",
+    stripePriceIdYearly:
+      process.env.NEXT_PUBLIC_STRIPE_ELITE_YEARLY_PRICE_ID ?? "",
     limits: {
       maxBots: -1,
       maxAgents: -1,
@@ -140,7 +146,8 @@ export function getPlan(id: PlanId): Plan {
 }
 
 export function formatCredits(credits: number): string {
-  if (credits >= 1000) return `${(credits / 1000).toFixed(credits % 1000 === 0 ? 0 : 1)}k`;
+  if (credits >= 1000)
+    return `${(credits / 1000).toFixed(credits % 1000 === 0 ? 0 : 1)}k`;
   return credits.toString();
 }
 

@@ -193,7 +193,12 @@ export type Database = {
           id: string;
           user_id: string;
           tier: "free" | "starter" | "pro" | "elite";
-          status: "active" | "canceled" | "past_due" | "trialing" | "incomplete";
+          status:
+            | "active"
+            | "canceled"
+            | "past_due"
+            | "trialing"
+            | "incomplete";
           stripe_customer_id: string | null;
           stripe_subscription_id: string | null;
           stripe_price_id: string | null;
@@ -206,7 +211,12 @@ export type Database = {
         Insert: {
           user_id: string;
           tier?: "free" | "starter" | "pro" | "elite";
-          status?: "active" | "canceled" | "past_due" | "trialing" | "incomplete";
+          status?:
+            | "active"
+            | "canceled"
+            | "past_due"
+            | "trialing"
+            | "incomplete";
           stripe_customer_id?: string | null;
           stripe_subscription_id?: string | null;
           stripe_price_id?: string | null;
@@ -216,7 +226,12 @@ export type Database = {
         };
         Update: {
           tier?: "free" | "starter" | "pro" | "elite";
-          status?: "active" | "canceled" | "past_due" | "trialing" | "incomplete";
+          status?:
+            | "active"
+            | "canceled"
+            | "past_due"
+            | "trialing"
+            | "incomplete";
           stripe_customer_id?: string | null;
           stripe_subscription_id?: string | null;
           stripe_price_id?: string | null;

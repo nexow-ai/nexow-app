@@ -48,9 +48,7 @@ export function useProfile() {
     refresh();
   }, [refresh]);
 
-  const displayName = data
-    ? (data.displayName || data.username)
-    : null;
+  const displayName = data ? data.displayName || data.username : null;
 
   return { data, displayName, loading, refresh };
 }

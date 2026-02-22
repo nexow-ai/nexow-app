@@ -12,7 +12,12 @@ interface UseRealtimeOptions {
   onPayload: (payload: Record<string, unknown>) => void;
 }
 
-export function useRealtime({ table, event = "*", filter, onPayload }: UseRealtimeOptions) {
+export function useRealtime({
+  table,
+  event = "*",
+  filter,
+  onPayload,
+}: UseRealtimeOptions) {
   useEffect(() => {
     const supabase = createClient();
 
