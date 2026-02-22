@@ -15,16 +15,26 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+  const [usernameStatus, setUsernameStatus] = useState<
+    "idle" | "checking" | "available" | "taken"
+  >("idle");
 
   const checkUsername = useCallback(async (value: string) => {
     const trimmed = value.trim().toLowerCase();
-    if (trimmed.length < 3) { setUsernameStatus("idle"); return; }
+    if (trimmed.length < 3) {
+      setUsernameStatus("idle");
+      return;
+    }
 
     setUsernameStatus("checking");
-    const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(trimmed)}`);
+    const res = await fetch(
+      `/api/auth/check-username?username=${encodeURIComponent(trimmed)}`
+    );
     const data = await res.json();
-    if (!res.ok) { setUsernameStatus("idle"); return; }
+    if (!res.ok) {
+      setUsernameStatus("idle");
+      return;
+    }
     setUsernameStatus(data.available ? "available" : "taken");
   }, []);
 
@@ -46,7 +56,11 @@ export default function SignupPage() {
     });
     const data = await res.json();
 
-    if (!res.ok) { setError(data.error ?? "Sign up failed"); setLoading(false); return; }
+    if (!res.ok) {
+      setError(data.error ?? "Sign up failed");
+      setLoading(false);
+      return;
+    }
     router.push("/dashboard");
     router.refresh();
   }
@@ -63,13 +77,21 @@ export default function SignupPage() {
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-purple-500 to-emerald-500 text-3xl font-bold text-white shadow-2xl shadow-purple-500/20">
               N
             </div>
-            <h2 className="text-2xl font-bold text-white">Join the Future of Trading</h2>
+            <h2 className="text-2xl font-bold text-white">
+              Join the Future of Trading
+            </h2>
             <p className="max-w-sm text-sm leading-relaxed text-zinc-500">
-              Create agents that trade while you sleep. No coding needed, just describe what you want in plain English.
+              Create agents that trade while you sleep. No coding needed, just
+              describe what you want in plain English.
             </p>
 
             <div className="space-y-3 pt-6 text-left">
-              {["AI generates your trading strategy", "24/7 automated execution", "Compete on the global leaderboard", "Earn from copy trading"].map((item) => (
+              {[
+                "AI generates your trading strategy",
+                "24/7 automated execution",
+                "Compete on the global leaderboard",
+                "Earn from copy trading",
+              ].map((item) => (
                 <div key={item} className="flex items-center gap-3">
                   <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/20">
                     <Check className="h-3 w-3 text-emerald-400" />
@@ -87,7 +109,9 @@ export default function SignupPage() {
         <div className="mx-auto w-full max-w-sm">
           <Logo size="lg" className="mb-12" />
 
-          <h1 className="text-3xl font-bold tracking-tight text-white">Create your account</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-white">
+            Create your account
+          </h1>
           <p className="mt-2 text-sm text-zinc-500">
             Start building your trading agents today.
           </p>
@@ -101,18 +125,30 @@ export default function SignupPage() {
                 placeholder="quant_king"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                error={usernameStatus === "taken" ? "Username is already taken" : undefined}
+                error={
+                  usernameStatus === "taken"
+                    ? "Username is already taken"
+                    : undefined
+                }
                 required
                 minLength={3}
               />
               {username.length >= 3 && usernameStatus !== "idle" && (
                 <div className="mt-2 flex items-center gap-1.5 text-xs">
-                  {usernameStatus === "checking" && <span className="text-zinc-500">Checking...</span>}
+                  {usernameStatus === "checking" && (
+                    <span className="text-zinc-500">Checking...</span>
+                  )}
                   {usernameStatus === "available" && (
-                    <><Check className="h-3.5 w-3.5 text-emerald-400" /><span className="text-emerald-400">Available</span></>
+                    <>
+                      <Check className="h-3.5 w-3.5 text-emerald-400" />
+                      <span className="text-emerald-400">Available</span>
+                    </>
                   )}
                   {usernameStatus === "taken" && (
-                    <><X className="h-3.5 w-3.5 text-red-400" /><span className="text-red-400">Taken</span></>
+                    <>
+                      <X className="h-3.5 w-3.5 text-red-400" />
+                      <span className="text-red-400">Taken</span>
+                    </>
                   )}
                 </div>
               )}
@@ -144,7 +180,9 @@ export default function SignupPage() {
               type="submit"
               className="w-full"
               loading={loading}
-              disabled={usernameStatus === "taken" || usernameStatus === "checking"}
+              disabled={
+                usernameStatus === "taken" || usernameStatus === "checking"
+              }
             >
               Create Account
               <ArrowRight className="h-4 w-4" />
@@ -153,7 +191,10 @@ export default function SignupPage() {
 
           <p className="mt-8 text-center text-sm text-zinc-600">
             Already have an account?{" "}
-            <Link href="/login" className="font-medium text-emerald-400 transition-colors hover:text-emerald-300">
+            <Link
+              href="/login"
+              className="font-medium text-emerald-400 transition-colors hover:text-emerald-300"
+            >
               Sign In
             </Link>
           </p>

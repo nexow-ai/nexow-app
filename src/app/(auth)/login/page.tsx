@@ -54,7 +54,9 @@ export default function LoginPage() {
         <div className="mx-auto w-full max-w-sm">
           <Logo size="lg" className="mb-12" />
 
-          <h1 className="text-3xl font-bold tracking-tight text-white">Welcome back</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-white">
+            Welcome back
+          </h1>
           <p className="mt-2 text-sm text-zinc-500">
             Sign in to manage your trading agents.
           </p>
@@ -89,7 +91,10 @@ export default function LoginPage() {
 
           <p className="mt-8 text-center text-sm text-zinc-600">
             Don&apos;t have an account?{" "}
-            <Link href="/signup" className="font-medium text-emerald-400 transition-colors hover:text-emerald-300">
+            <Link
+              href="/signup"
+              className="font-medium text-emerald-400 transition-colors hover:text-emerald-300"
+            >
               Create one
             </Link>
           </p>
@@ -106,26 +111,35 @@ export default function LoginPage() {
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-500 to-cyan-500 text-3xl font-bold text-white shadow-2xl shadow-emerald-500/20">
               N
             </div>
-            <h2 className="text-2xl font-bold text-white">Trade Smarter, Not Harder</h2>
+            <h2 className="text-2xl font-bold text-white">
+              Trade Smarter, Not Harder
+            </h2>
             <p className="max-w-sm text-sm leading-relaxed text-zinc-500">
-              AI-powered trading agents that work 24/7. Build strategies in plain English, compete globally, and earn through social trading.
+              AI-powered trading agents that work 24/7. Build strategies in
+              plain English, compete globally, and earn through social trading.
             </p>
 
             {/* Social proof */}
             <div className="mt-8 flex items-center justify-center gap-6 pt-4">
               <div className="text-center">
                 <p className="text-2xl font-bold text-white">24/7</p>
-                <p className="text-[11px] uppercase tracking-wider text-zinc-600">Uptime</p>
+                <p className="text-[11px] uppercase tracking-wider text-zinc-600">
+                  Uptime
+                </p>
               </div>
               <div className="h-8 w-px bg-zinc-800" />
               <div className="text-center">
                 <p className="text-2xl font-bold text-white">8+</p>
-                <p className="text-[11px] uppercase tracking-wider text-zinc-600">Instruments</p>
+                <p className="text-[11px] uppercase tracking-wider text-zinc-600">
+                  Instruments
+                </p>
               </div>
               <div className="h-8 w-px bg-zinc-800" />
               <div className="text-center">
                 <p className="text-2xl font-bold text-white">AI</p>
-                <p className="text-[11px] uppercase tracking-wider text-zinc-600">Powered</p>
+                <p className="text-[11px] uppercase tracking-wider text-zinc-600">
+                  Powered
+                </p>
               </div>
             </div>
           </div>

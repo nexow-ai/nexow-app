@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(req: NextRequest) {
   try {
-    const username = req.nextUrl.searchParams.get("username")?.trim().toLowerCase();
+    const username = req.nextUrl.searchParams
+      .get("username")
+      ?.trim()
+      .toLowerCase();
     if (!username || username.length < 3) {
       return NextResponse.json(
         { error: "Username must be at least 3 characters" },
