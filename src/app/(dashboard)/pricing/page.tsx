@@ -123,8 +123,7 @@ function PricingContent() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           {PLANS.map((plan) => {
             const isCurrentPlan = subscription?.tier === plan.id;
-            const price =
-              billing === "yearly" ? plan.yearlyPrice : plan.price;
+            const price = billing === "yearly" ? plan.yearlyPrice : plan.price;
             const monthlyEquivalent =
               billing === "yearly" && plan.yearlyPrice > 0
                 ? Math.round(plan.yearlyPrice / 12)
@@ -236,11 +235,7 @@ function PricingContent() {
                       Current Plan
                     </Button>
                   ) : plan.id === "free" ? (
-                    <Button
-                      variant="ghost"
-                      className="w-full"
-                      disabled
-                    >
+                    <Button variant="ghost" className="w-full" disabled>
                       Free Forever
                     </Button>
                   ) : (
@@ -313,9 +308,7 @@ function PricingContent() {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10">
                 <Zap className="h-4 w-4 text-blue-400" />
               </div>
-              <span className="text-sm font-medium text-zinc-200">
-                Bots
-              </span>
+              <span className="text-sm font-medium text-zinc-200">Bots</span>
             </div>
             <p className="text-2xl font-bold text-zinc-100">
               0
@@ -359,11 +352,7 @@ function Feature({
               : "bg-zinc-900 text-zinc-700"
         }`}
       >
-        {enabled ? (
-          icon
-        ) : (
-          <span className="text-[10px]">—</span>
-        )}
+        {enabled ? icon : <span className="text-[10px]">—</span>}
       </div>
       <span className="text-xs">{text}</span>
     </div>

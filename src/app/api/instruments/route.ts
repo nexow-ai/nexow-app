@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
-
-const NEXOW_API_URL =
-  process.env.NEXOW_API_URL || "http://localhost:8000";
+const NEXOW_API_URL = process.env.NEXOW_API_URL || "http://localhost:8000";
 
 interface OandaTag {
   type: string;
@@ -32,17 +29,67 @@ interface InstrumentGroup {
 // Classification helpers
 // ---------------------------------------------------------------------------
 
-const MAJORS = new Set(["EUR", "USD", "GBP", "JPY", "CHF", "AUD", "CAD", "NZD"]);
+const MAJORS = new Set([
+  "EUR",
+  "USD",
+  "GBP",
+  "JPY",
+  "CHF",
+  "AUD",
+  "CAD",
+  "NZD",
+]);
 const MAJOR_PAIRS = new Set([
-  "EUR_USD", "GBP_USD", "USD_JPY", "USD_CHF", "AUD_USD", "USD_CAD", "NZD_USD",
+  "EUR_USD",
+  "GBP_USD",
+  "USD_JPY",
+  "USD_CHF",
+  "AUD_USD",
+  "USD_CAD",
+  "NZD_USD",
 ]);
 
 // Known crypto base currencies (Oanda classifies crypto as CFD)
 const CRYPTO_BASES = new Set([
-  "BTC", "ETH", "LTC", "BCH", "XRP", "LINK", "UNI", "DOGE", "SOL", "DOT",
-  "AVAX", "ADA", "MATIC", "ATOM", "XLM", "ALGO", "AAVE", "COMP", "MKR",
-  "SUSHI", "YFI", "SNX", "BAT", "ZRX", "CRV", "FIL", "EOS", "XTZ", "SHIB",
-  "APE", "NEAR", "FTM", "MANA", "SAND", "AXS", "ENJ", "GRT", "OP", "ARB",
+  "BTC",
+  "ETH",
+  "LTC",
+  "BCH",
+  "XRP",
+  "LINK",
+  "UNI",
+  "DOGE",
+  "SOL",
+  "DOT",
+  "AVAX",
+  "ADA",
+  "MATIC",
+  "ATOM",
+  "XLM",
+  "ALGO",
+  "AAVE",
+  "COMP",
+  "MKR",
+  "SUSHI",
+  "YFI",
+  "SNX",
+  "BAT",
+  "ZRX",
+  "CRV",
+  "FIL",
+  "EOS",
+  "XTZ",
+  "SHIB",
+  "APE",
+  "NEAR",
+  "FTM",
+  "MANA",
+  "SAND",
+  "AXS",
+  "ENJ",
+  "GRT",
+  "OP",
+  "ARB",
 ]);
 
 // Metals that might come as CFD instead of METAL in some account types
@@ -50,13 +97,49 @@ const METAL_BASES = new Set(["XAU", "XAG", "XPT", "XPD", "XCU"]);
 
 // Pattern-based classification for CFDs when tags aren't helpful
 const INDEX_PATTERNS = [
-  "US30", "SPX500", "NAS100", "US2000", "UK100", "DE30", "DE40", "FR40",
-  "EU50", "JP225", "AU200", "HK33", "SG30", "CN50", "IN50", "TWIX", "NL25",
-  "ESPIX", "CH20", "CHINAH", "SE30",
+  "US30",
+  "SPX500",
+  "NAS100",
+  "US2000",
+  "UK100",
+  "DE30",
+  "DE40",
+  "FR40",
+  "EU50",
+  "JP225",
+  "AU200",
+  "HK33",
+  "SG30",
+  "CN50",
+  "IN50",
+  "TWIX",
+  "NL25",
+  "ESPIX",
+  "CH20",
+  "CHINAH",
+  "SE30",
 ];
-const BOND_PATTERNS = ["USB02Y", "USB05Y", "USB10Y", "USB30Y", "UK10YB", "DE10YB", "DE05YB", "DE02YB", "AU2YB"];
+const BOND_PATTERNS = [
+  "USB02Y",
+  "USB05Y",
+  "USB10Y",
+  "USB30Y",
+  "UK10YB",
+  "DE10YB",
+  "DE05YB",
+  "DE02YB",
+  "AU2YB",
+];
 const COMMODITY_PATTERNS = [
-  "BCO", "WTICO", "NATGAS", "SOYBN", "CORN", "WHEAT", "SUGAR", "COTTON", "COFFEE",
+  "BCO",
+  "WTICO",
+  "NATGAS",
+  "SOYBN",
+  "CORN",
+  "WHEAT",
+  "SUGAR",
+  "COTTON",
+  "COFFEE",
 ];
 
 /**
@@ -86,9 +169,16 @@ function classifyByTags(tags: OandaTag[]): string | null {
   const asset = byType["ASSET_CLASS"] || "";
   if (asset.includes("INDEX") || asset.includes("INDICE")) return "indices";
   if (asset.includes("BOND") || asset.includes("TREASURY")) return "bonds";
-  if (asset.includes("COMMODITY") || asset.includes("COMMODIT")) return "commodities";
+  if (asset.includes("COMMODITY") || asset.includes("COMMODIT"))
+    return "commodities";
   if (asset.includes("CRYPTO") || asset.includes("DIGITAL")) return "crypto";
-  if (asset.includes("SHARE") || asset.includes("STOCK") || asset.includes("EQUITY") || asset.includes("EQUITIE")) return "stocks";
+  if (
+    asset.includes("SHARE") ||
+    asset.includes("STOCK") ||
+    asset.includes("EQUITY") ||
+    asset.includes("EQUITIE")
+  )
+    return "stocks";
   if (asset.includes("ETF")) return "etfs";
   if (asset.includes("METAL")) return "metals";
 
@@ -120,14 +210,20 @@ function classifyByName(name: string): string {
   if (COMMODITY_PATTERNS.some((p) => name.startsWith(p))) return "commodities";
 
   // If it's a single-word base + _USD/EUR/etc., likely a stock ticker
-  if (base.length <= 5 && base === base.toUpperCase() && /^[A-Z]+$/.test(base)) {
+  if (
+    base.length <= 5 &&
+    base === base.toUpperCase() &&
+    /^[A-Z]+$/.test(base)
+  ) {
     return "stocks";
   }
 
   return "other";
 }
 
-function classifyForex(name: string): "forex_major" | "forex_minor" | "forex_exotic" {
+function classifyForex(
+  name: string
+): "forex_major" | "forex_minor" | "forex_exotic" {
   if (MAJOR_PAIRS.has(name)) return "forex_major";
   const [base, quote] = name.split("_");
   if (MAJORS.has(base) && MAJORS.has(quote)) return "forex_minor";
@@ -184,8 +280,17 @@ function groupInstruments(instruments: OandaInstrument[]): InstrumentGroup[] {
 
   // Preserve a logical display order
   const order = [
-    "forex_major", "forex_minor", "forex_exotic",
-    "metals", "crypto", "indices", "commodities", "bonds", "stocks", "etfs", "other",
+    "forex_major",
+    "forex_minor",
+    "forex_exotic",
+    "metals",
+    "crypto",
+    "indices",
+    "commodities",
+    "bonds",
+    "stocks",
+    "etfs",
+    "other",
   ];
 
   return order
@@ -201,7 +306,8 @@ function groupInstruments(instruments: OandaInstrument[]): InstrumentGroup[] {
 // In-memory cache
 // ---------------------------------------------------------------------------
 
-let cachedResponse: { data: InstrumentGroup[]; timestamp: number } | null = null;
+let cachedResponse: { data: InstrumentGroup[]; timestamp: number } | null =
+  null;
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 export async function GET() {
@@ -229,7 +335,10 @@ export async function GET() {
     return NextResponse.json({ groups });
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to fetch instruments" },
+      {
+        error:
+          err instanceof Error ? err.message : "Failed to fetch instruments",
+      },
       { status: 500 }
     );
   }

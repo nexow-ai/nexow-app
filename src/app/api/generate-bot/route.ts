@@ -3,10 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { canDeployAgent, hasCredits } from "@/lib/stripe/guards";
 import { CREDIT_COSTS } from "@/lib/stripe/plans";
 
-export const dynamic = "force-dynamic";
-
-const NEXOW_API_URL =
-  process.env.NEXOW_API_URL || "http://localhost:8000";
+const NEXOW_API_URL = process.env.NEXOW_API_URL || "http://localhost:8000";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -27,10 +24,7 @@ export async function POST(request: NextRequest) {
 
   const deployCheck = await canDeployAgent(user.id, "bot");
   if (!deployCheck.allowed) {
-    return NextResponse.json(
-      { error: deployCheck.reason },
-      { status: 403 }
-    );
+    return NextResponse.json({ error: deployCheck.reason }, { status: 403 });
   }
 
   const hasCreds = await hasCredits(user.id, CREDIT_COSTS.agentGeneration);

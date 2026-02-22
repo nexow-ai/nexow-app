@@ -12,11 +12,7 @@ import {
 import { useBacktest } from "@/hooks/use-backtest";
 import { useSession } from "@/hooks/use-session";
 import { useSubscription } from "@/hooks/use-subscription";
-import {
-  CREDIT_COSTS,
-  formatCredits,
-  isUnlimited,
-} from "@/lib/stripe/plans";
+import { CREDIT_COSTS, formatCredits, isUnlimited } from "@/lib/stripe/plans";
 import {
   INSTRUMENT_GROUPS as FALLBACK_GROUPS,
   type InstrumentGroup,
@@ -114,7 +110,11 @@ export default function NewBotPage() {
         const res = await fetch("/api/instruments");
         if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();
-        if (!cancelled && Array.isArray(data.groups) && data.groups.length > 0) {
+        if (
+          !cancelled &&
+          Array.isArray(data.groups) &&
+          data.groups.length > 0
+        ) {
           setInstrumentGroups(data.groups);
         }
       } catch {
@@ -124,7 +124,9 @@ export default function NewBotPage() {
       }
     }
     fetchInstruments();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Step 1: Assets
@@ -158,7 +160,11 @@ export default function NewBotPage() {
   const [error, setError] = useState("");
 
   // Step 5: Backtest
-  const { state: backtestState, runBacktest, reset: resetBacktest } = useBacktest();
+  const {
+    state: backtestState,
+    runBacktest,
+    reset: resetBacktest,
+  } = useBacktest();
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -274,7 +280,9 @@ export default function NewBotPage() {
     try {
       const config = {
         ...generated.config,
-        ...(generated.strategy_code ? { strategy_code: generated.strategy_code } : {}),
+        ...(generated.strategy_code
+          ? { strategy_code: generated.strategy_code }
+          : {}),
       };
       const instrumentsArr = Array.from(selectedInstruments);
       const primaryInstrument = instrumentsArr[0] ?? "EUR_USD";
@@ -289,9 +297,7 @@ export default function NewBotPage() {
         (configInstruments[0]?.timeframe as string) ?? "H1";
 
       const uniqueInstruments = instrumentsArr.map((id) => {
-        const match = configInstruments.find(
-          (ci) => ci.instrument === id
-        );
+        const match = configInstruments.find((ci) => ci.instrument === id);
         return {
           instrument: id,
           timeframe: (match?.timeframe as string) ?? "H1",
@@ -316,13 +322,11 @@ export default function NewBotPage() {
         }),
       });
       const agentData = await agentRes.json();
-      if (!agentRes.ok) throw new Error(agentData.error ?? "Failed to create bot");
+      if (!agentRes.ok)
+        throw new Error(agentData.error ?? "Failed to create bot");
       const agentId = agentData.agent?.id ?? agentData.id;
 
-      if (
-        backtestState.phase === "complete" &&
-        backtestState.result
-      ) {
+      if (backtestState.phase === "complete" && backtestState.result) {
         const bt = backtestState.result;
         const btRes = await fetch("/api/backtests", {
           method: "POST",
@@ -405,7 +409,8 @@ export default function NewBotPage() {
     !isUnlimited(plan.limits.maxBots) &&
     subscription.botCount >= plan.limits.maxBots;
   const noCredits =
-    subscription && subscription.creditsRemaining < CREDIT_COSTS.agentGeneration;
+    subscription &&
+    subscription.creditsRemaining < CREDIT_COSTS.agentGeneration;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 pb-12">
@@ -430,7 +435,8 @@ export default function NewBotPage() {
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-amber-400" />
             <p className="text-sm font-medium text-amber-400">
-              Low credits ({subscription.creditsRemaining} remaining, {CREDIT_COSTS.agentGeneration} needed).{" "}
+              Low credits ({subscription.creditsRemaining} remaining,{" "}
+              {CREDIT_COSTS.agentGeneration} needed).{" "}
               <Link href="/pricing" className="underline hover:text-amber-300">
                 Upgrade
               </Link>{" "}
@@ -461,18 +467,20 @@ export default function NewBotPage() {
                 if (i < stepIndex) setStep(s.key);
               }}
               disabled={i > stepIndex}
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-colors ${step === s.key
+              className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                step === s.key
                   ? "bg-emerald-600 text-white"
                   : i < stepIndex
                     ? "bg-emerald-900/50 text-emerald-400 hover:bg-emerald-900/70 cursor-pointer"
                     : "bg-zinc-800 text-zinc-500"
-                }`}
+              }`}
             >
               {i < stepIndex ? <Check className="h-4 w-4" /> : i + 1}
             </button>
             <span
-              className={`hidden text-xs font-medium sm:inline ${step === s.key ? "text-zinc-200" : "text-zinc-500"
-                }`}
+              className={`hidden text-xs font-medium sm:inline ${
+                step === s.key ? "text-zinc-200" : "text-zinc-500"
+              }`}
             >
               {s.label}
             </span>
@@ -493,8 +501,8 @@ export default function NewBotPage() {
               Select Trading Assets
             </h1>
             <p className="mt-1 text-sm text-zinc-400">
-              Choose the instruments your bot will trade. Timeframes are
-              defined in the entry and exit strategy.
+              Choose the instruments your bot will trade. Timeframes are defined
+              in the entry and exit strategy.
             </p>
           </div>
 
@@ -549,7 +557,9 @@ export default function NewBotPage() {
           {loadingInstruments && (
             <div className="flex items-center gap-2 rounded-xl border border-zinc-800/60 bg-zinc-900/30 px-4 py-3">
               <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
-              <span className="text-sm text-zinc-400">Loading instruments from Oanda...</span>
+              <span className="text-sm text-zinc-400">
+                Loading instruments from Oanda...
+              </span>
             </div>
           )}
           <div className="space-y-2">
@@ -577,7 +587,9 @@ export default function NewBotPage() {
                         {group.instruments.length} instruments
                       </span>
                       {selectedCount > 0 && (
-                        <Badge variant="success">{selectedCount} selected</Badge>
+                        <Badge variant="success">
+                          {selectedCount} selected
+                        </Badge>
                       )}
                     </div>
                     {isExpanded ? (
@@ -596,16 +608,18 @@ export default function NewBotPage() {
                             <button
                               key={inst.id}
                               onClick={() => toggleInstrument(inst.id)}
-                              className={`group flex items-center gap-2 rounded-lg px-3 py-2 text-left transition-all ${isSelected
+                              className={`group flex items-center gap-2 rounded-lg px-3 py-2 text-left transition-all ${
+                                isSelected
                                   ? "border border-emerald-500/40 bg-emerald-500/10"
                                   : "border border-transparent hover:border-zinc-700/60 hover:bg-zinc-800/40"
-                                }`}
+                              }`}
                             >
                               <div
-                                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${isSelected
+                                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                                  isSelected
                                     ? "border-emerald-500 bg-emerald-500"
                                     : "border-zinc-600 group-hover:border-zinc-500"
-                                  }`}
+                                }`}
                               >
                                 {isSelected && (
                                   <Check className="h-2.5 w-2.5 text-white" />
@@ -863,9 +877,7 @@ export default function NewBotPage() {
             </div>
             <textarea
               value={exitConfig.market_conditions}
-              onChange={(e) =>
-                updateExit("market_conditions", e.target.value)
-              }
+              onChange={(e) => updateExit("market_conditions", e.target.value)}
               placeholder="e.g. Close all positions if VIX spikes above 30, close if trend reversal on H4, exit if spread widens beyond normal..."
               rows={3}
               className="w-full rounded-lg border border-zinc-800/60 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-blue-500/50 focus:outline-none focus:ring-1 focus:ring-blue-500/20"
@@ -1189,7 +1201,9 @@ export default function NewBotPage() {
                   ? parseFloat(exitConfig.take_profit_pct)
                   : null,
               },
-              period_start: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
+              period_start: new Date(
+                Date.now() - 365 * 24 * 60 * 60 * 1000
+              ).toISOString(),
               period_end: new Date().toISOString(),
             });
           }}

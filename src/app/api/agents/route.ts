@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(req: NextRequest) {
   try {
     const supabase = await createClient();
@@ -17,7 +15,9 @@ export async function GET(req: NextRequest) {
     const from = (supabase.from as Function).bind(supabase);
     let query = from("agents").select("*").eq("creator_id", user.id);
     if (type) query = query.eq("type", type);
-    const { data, error } = await query.order("created_at", { ascending: false });
+    const { data, error } = await query.order("created_at", {
+      ascending: false,
+    });
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

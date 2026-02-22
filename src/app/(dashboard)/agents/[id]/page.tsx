@@ -45,7 +45,10 @@ interface AgentDetailPageProps {
   params: Promise<{ id: string }>;
 }
 
-const STYLE_META: Record<string, { label: string; icon: typeof Shield; color: string }> = {
+const STYLE_META: Record<
+  string,
+  { label: string; icon: typeof Shield; color: string }
+> = {
   conservative: { label: "Conservative", icon: Shield, color: "text-blue-400" },
   balanced: { label: "Balanced", icon: Scale, color: "text-purple-400" },
   aggressive: { label: "Aggressive", icon: Flame, color: "text-amber-400" },
@@ -93,9 +96,7 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
     const openTrades = trades.filter((t) => t.status === "open");
     if (openTrades.length === 0) return;
 
-    const openInstruments = [
-      ...new Set(openTrades.map((t) => t.instrument)),
-    ];
+    const openInstruments = [...new Set(openTrades.map((t) => t.instrument))];
 
     const prices: Record<string, number> = { ...livePrices };
 
@@ -331,15 +332,14 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
           { label: "Trades", value: String(viewTrades.length) },
           {
             label: "Open",
-            value: String(
-              viewTrades.filter((t) => t.status === "open").length
-            ),
+            value: String(viewTrades.filter((t) => t.status === "open").length),
           },
           {
             label: "Total Tokens",
-            value: evalsTotalTokens > 1000
-              ? `${(evalsTotalTokens / 1000).toFixed(1)}k`
-              : String(evalsTotalTokens),
+            value:
+              evalsTotalTokens > 1000
+                ? `${(evalsTotalTokens / 1000).toFixed(1)}k`
+                : String(evalsTotalTokens),
           },
           {
             label: "Avg Tokens/Eval",
@@ -568,8 +568,7 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
                         : "—"}
                     </TableCell>
                     <TableCell>
-                      {trade.status === "closed" &&
-                      trade.return_pct != null ? (
+                      {trade.status === "closed" && trade.return_pct != null ? (
                         <span
                           className={
                             trade.return_pct >= 0
@@ -633,9 +632,7 @@ export default function AgentDetailPage({ params }: AgentDetailPageProps) {
                     </TableCell>
                     <TableCell>
                       <Badge
-                        variant={
-                          trade.status === "open" ? "info" : "default"
-                        }
+                        variant={trade.status === "open" ? "info" : "default"}
                       >
                         {trade.status}
                       </Badge>

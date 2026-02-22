@@ -4,11 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { useSubscription } from "@/hooks/use-subscription";
-import {
-  CREDIT_COSTS,
-  formatCredits,
-  isUnlimited,
-} from "@/lib/stripe/plans";
+import { CREDIT_COSTS, formatCredits, isUnlimited } from "@/lib/stripe/plans";
 import {
   ArrowUpRight,
   Bot,
@@ -86,23 +82,17 @@ function BillingContent() {
 
   const creditsPercent =
     subscription.creditsLimit > 0
-      ? Math.round(
-          (subscription.creditsUsed / subscription.creditsLimit) * 100
-        )
+      ? Math.round((subscription.creditsUsed / subscription.creditsLimit) * 100)
       : 0;
 
   const botPercent =
     plan.limits.maxBots > 0
-      ? Math.round(
-          (subscription.botCount / plan.limits.maxBots) * 100
-        )
+      ? Math.round((subscription.botCount / plan.limits.maxBots) * 100)
       : 0;
 
   const agentPercent =
     plan.limits.maxAgents > 0
-      ? Math.round(
-          (subscription.agentCount / plan.limits.maxAgents) * 100
-        )
+      ? Math.round((subscription.agentCount / plan.limits.maxAgents) * 100)
       : 0;
 
   return (
@@ -368,9 +358,7 @@ function BillingContent() {
             <Link href="/pricing">
               <Button variant="outline" size="sm">
                 <ArrowUpRight className="h-3.5 w-3.5" />
-                {subscription.tier === "free"
-                  ? "Upgrade Plan"
-                  : "Change Plan"}
+                {subscription.tier === "free" ? "Upgrade Plan" : "Change Plan"}
               </Button>
             </Link>
           </div>

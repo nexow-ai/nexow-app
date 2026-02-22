@@ -19,7 +19,15 @@ import {
 import { useAgent } from "@/hooks/use-agents";
 import { useTrades } from "@/hooks/use-trades";
 import type { InstrumentConfig } from "@/lib/types/database";
-import { BarChart3, Loader2, Pause, Play, Radio, Trash2, Zap } from "lucide-react";
+import {
+  BarChart3,
+  Loader2,
+  Pause,
+  Play,
+  Radio,
+  Trash2,
+  Zap,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { use, useCallback, useEffect, useState } from "react";
 
@@ -63,9 +71,7 @@ export default function BotDetailPage({ params }: BotDetailPageProps) {
     const openTrades = trades.filter((t) => t.status === "open");
     if (openTrades.length === 0) return;
 
-    const openInstruments = [
-      ...new Set(openTrades.map((t) => t.instrument)),
-    ];
+    const openInstruments = [...new Set(openTrades.map((t) => t.instrument))];
 
     const prices: Record<string, number> = { ...livePrices };
 
@@ -173,7 +179,9 @@ export default function BotDetailPage({ params }: BotDetailPageProps) {
                 Bot
               </Badge>
               <span className="text-xs text-zinc-600">
-                {instruments.map((i) => i.instrument.replace("_", "/")).join(", ")}
+                {instruments
+                  .map((i) => i.instrument.replace("_", "/"))
+                  .join(", ")}
               </span>
             </div>
           </div>
@@ -247,9 +255,7 @@ export default function BotDetailPage({ params }: BotDetailPageProps) {
           { label: "Trades", value: String(viewTrades.length) },
           {
             label: "Open",
-            value: String(
-              viewTrades.filter((t) => t.status === "open").length
-            ),
+            value: String(viewTrades.filter((t) => t.status === "open").length),
           },
         ].map((stat) => (
           <div
@@ -372,8 +378,7 @@ export default function BotDetailPage({ params }: BotDetailPageProps) {
                         : "—"}
                     </TableCell>
                     <TableCell>
-                      {trade.status === "closed" &&
-                        trade.return_pct != null ? (
+                      {trade.status === "closed" && trade.return_pct != null ? (
                         <span
                           className={
                             trade.return_pct >= 0
@@ -384,7 +389,8 @@ export default function BotDetailPage({ params }: BotDetailPageProps) {
                           {trade.return_pct >= 0 ? "+" : ""}
                           {Number(trade.return_pct).toFixed(2)}%
                         </span>
-                      ) : trade.status === "open" && livePrices[trade.instrument] ? (
+                      ) : trade.status === "open" &&
+                        livePrices[trade.instrument] ? (
                         (() => {
                           const entry = Number(trade.entry_price);
                           const price = livePrices[trade.instrument];
@@ -414,7 +420,7 @@ export default function BotDetailPage({ params }: BotDetailPageProps) {
                     </TableCell>
                     <TableCell className="text-xs text-zinc-500">
                       {trade.stop_loss_pct != null ||
-                        trade.take_profit_pct != null ? (
+                      trade.take_profit_pct != null ? (
                         <>
                           {trade.stop_loss_pct != null && (
                             <span className="text-red-400/70">
@@ -436,9 +442,7 @@ export default function BotDetailPage({ params }: BotDetailPageProps) {
                     </TableCell>
                     <TableCell>
                       <Badge
-                        variant={
-                          trade.status === "open" ? "info" : "default"
-                        }
+                        variant={trade.status === "open" ? "info" : "default"}
                       >
                         {trade.status}
                       </Badge>
@@ -462,26 +466,34 @@ interface TradeViewToggleProps {
   onSetTradeView: (view: TradeView) => void;
 }
 
-function TradeViewToggle({ show, tradeView, liveTrades, backtestTrades, onSetTradeView }: TradeViewToggleProps) {
+function TradeViewToggle({
+  show,
+  tradeView,
+  liveTrades,
+  backtestTrades,
+  onSetTradeView,
+}: TradeViewToggleProps) {
   if (!show) return null;
   return (
     <div className="flex items-center gap-1 rounded-xl border border-zinc-800/60 bg-zinc-900/30 p-1 w-fit">
       <button
         onClick={() => onSetTradeView("live")}
-        className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${tradeView === "live"
-          ? "bg-emerald-500/15 text-emerald-400"
-          : "text-zinc-500 hover:text-zinc-300"
-          }`}
+        className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+          tradeView === "live"
+            ? "bg-emerald-500/15 text-emerald-400"
+            : "text-zinc-500 hover:text-zinc-300"
+        }`}
       >
         <Radio className="h-3 w-3" />
         {`Live (${liveTrades.length})`}
       </button>
       <button
         onClick={() => onSetTradeView("backtest")}
-        className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${tradeView === "backtest"
-          ? "bg-purple-500/15 text-purple-400"
-          : "text-zinc-500 hover:text-zinc-300"
-          }`}
+        className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+          tradeView === "backtest"
+            ? "bg-purple-500/15 text-purple-400"
+            : "text-zinc-500 hover:text-zinc-300"
+        }`}
       >
         <BarChart3 className="h-3 w-3" />
         {`Backtest (${backtestTrades.length})`}

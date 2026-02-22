@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -40,8 +38,14 @@ export async function PATCH(
     }
 
     const from = (supabase.from as Function).bind(supabase);
-    const { data: existing } = await from("agents").select("creator_id").eq("id", id).single();
-    if (!existing || (existing as { creator_id: string }).creator_id !== user.id) {
+    const { data: existing } = await from("agents")
+      .select("creator_id")
+      .eq("id", id)
+      .single();
+    if (
+      !existing ||
+      (existing as { creator_id: string }).creator_id !== user.id
+    ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -49,11 +53,14 @@ export async function PATCH(
     const updatePayload: Record<string, unknown> = {};
     if (body.status !== undefined) updatePayload.status = body.status;
     if (body.name !== undefined) updatePayload.name = body.name;
-    if (body.description !== undefined) updatePayload.description = body.description;
+    if (body.description !== undefined)
+      updatePayload.description = body.description;
     if (body.config !== undefined) updatePayload.config = body.config;
     if (body.prompt !== undefined) updatePayload.prompt = body.prompt;
-    if (body.instrument !== undefined) updatePayload.instrument = body.instrument;
-    if (body.instruments !== undefined) updatePayload.instruments = body.instruments;
+    if (body.instrument !== undefined)
+      updatePayload.instrument = body.instrument;
+    if (body.instruments !== undefined)
+      updatePayload.instruments = body.instruments;
     if (body.timeframe !== undefined) updatePayload.timeframe = body.timeframe;
 
     const { data, error } = await from("agents")
@@ -87,8 +94,14 @@ export async function DELETE(
     }
 
     const from = (supabase.from as Function).bind(supabase);
-    const { data: existing } = await from("agents").select("creator_id").eq("id", id).single();
-    if (!existing || (existing as { creator_id: string }).creator_id !== user.id) {
+    const { data: existing } = await from("agents")
+      .select("creator_id")
+      .eq("id", id)
+      .single();
+    if (
+      !existing ||
+      (existing as { creator_id: string }).creator_id !== user.id
+    ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

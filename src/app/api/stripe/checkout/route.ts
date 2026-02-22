@@ -3,8 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe/server";
 import { PLANS, type PlanId } from "@/lib/stripe/plans";
 
-export const dynamic = "force-dynamic";
-
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient();
@@ -27,7 +25,9 @@ export async function POST(req: NextRequest) {
     }
 
     const priceId =
-      billing === "yearly" ? plan.stripePriceIdYearly : plan.stripePriceIdMonthly;
+      billing === "yearly"
+        ? plan.stripePriceIdYearly
+        : plan.stripePriceIdMonthly;
 
     if (!priceId) {
       return NextResponse.json(

@@ -13,7 +13,9 @@ export default function AgentsPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">My Agents</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-white">
+            My Agents
+          </h1>
           <p className="mt-1 text-sm text-zinc-500">
             AI-powered agents that analyze data and make trading decisions.
           </p>
@@ -45,9 +47,8 @@ export default function AgentsPage() {
           </div>
           <h3 className="text-lg font-semibold text-white">No agents yet</h3>
           <p className="mt-2 max-w-sm text-sm text-zinc-500">
-            Create your first agent. Configure data feeds and an LLM
-            provider, and your agent will analyze the market and trade on a
-            schedule.
+            Create your first agent. Configure data feeds and an LLM provider,
+            and your agent will analyze the market and trade on a schedule.
           </p>
           <Link href="/agents/new" className="mt-8">
             <Button>

@@ -1,6 +1,13 @@
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Activity, ArrowRight, Bot, DollarSign, Plus, TrendingUp } from "lucide-react";
+import {
+  Activity,
+  ArrowRight,
+  Bot,
+  DollarSign,
+  Plus,
+  TrendingUp,
+} from "lucide-react";
 import Link from "next/link";
 
 const stats = [
@@ -47,7 +54,9 @@ export default function DashboardPage() {
     <div className="space-y-8">
       {/* Welcome header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">Dashboard</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-white">
+          Dashboard
+        </h1>
         <p className="mt-1 text-sm text-zinc-500">
           Overview of your trading agents and signal performance.
         </p>
@@ -60,10 +69,14 @@ export default function DashboardPage() {
             key={stat.title}
             className="group relative overflow-hidden rounded-2xl border border-zinc-800/40 bg-zinc-900/30 p-5 backdrop-blur-sm transition-all duration-300 hover:border-zinc-700/50"
           >
-            <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-0 transition-opacity duration-300 group-hover:opacity-100`} />
+            <div
+              className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-0 transition-opacity duration-300 group-hover:opacity-100`}
+            />
             <div className="relative flex items-start justify-between">
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{stat.title}</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                  {stat.title}
+                </p>
                 <p className="mt-2 text-3xl font-bold tracking-tight text-white animate-count-up">
                   {stat.value}
                 </p>
@@ -87,9 +100,12 @@ export default function DashboardPage() {
               <div className="mb-4 rounded-2xl bg-zinc-800/50 p-4">
                 <Activity className="h-6 w-6 text-zinc-600" />
               </div>
-              <p className="text-sm font-medium text-zinc-400">No signals yet</p>
+              <p className="text-sm font-medium text-zinc-400">
+                No signals yet
+              </p>
               <p className="mt-1 max-w-xs text-xs text-zinc-600">
-                Create a bot or agent and it will start generating trading signals automatically when market conditions align.
+                Create a bot or agent and it will start generating trading
+                signals automatically when market conditions align.
               </p>
               <Link href="/bots/new" className="mt-5">
                 <Button size="sm">
@@ -107,9 +123,27 @@ export default function DashboardPage() {
           <CardContent>
             <div className="mt-2 space-y-3">
               {[
-                { title: "Create a Trading Bot", desc: "Build a rule-based bot from a prompt and backtest it", href: "/bots/new", icon: Bot, color: "emerald" },
-                { title: "View Leaderboard", desc: "See the top-performing agents by return %", href: "/leaderboard", icon: TrendingUp, color: "amber" },
-                { title: "Explore Copy Trading", desc: "Follow and copy top agents' signals", href: "/copy", icon: DollarSign, color: "cyan" },
+                {
+                  title: "Create a Trading Bot",
+                  desc: "Build a rule-based bot from a prompt and backtest it",
+                  href: "/bots/new",
+                  icon: Bot,
+                  color: "emerald",
+                },
+                {
+                  title: "View Leaderboard",
+                  desc: "See the top-performing agents by return %",
+                  href: "/leaderboard",
+                  icon: TrendingUp,
+                  color: "amber",
+                },
+                {
+                  title: "Explore Copy Trading",
+                  desc: "Follow and copy top agents' signals",
+                  href: "/copy",
+                  icon: DollarSign,
+                  color: "cyan",
+                },
               ].map((action) => (
                 <Link
                   key={action.title}
@@ -117,10 +151,14 @@ export default function DashboardPage() {
                   className="group flex items-center gap-4 rounded-xl border border-zinc-800/40 bg-zinc-900/20 p-4 transition-all duration-200 hover:border-zinc-700/50 hover:bg-zinc-900/40"
                 >
                   <div className={`rounded-xl bg-${action.color}-500/10 p-2.5`}>
-                    <action.icon className={`h-5 w-5 text-${action.color}-400`} />
+                    <action.icon
+                      className={`h-5 w-5 text-${action.color}-400`}
+                    />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-zinc-200">{action.title}</p>
+                    <p className="text-sm font-medium text-zinc-200">
+                      {action.title}
+                    </p>
                     <p className="text-xs text-zinc-600">{action.desc}</p>
                   </div>
                   <ArrowRight className="h-4 w-4 text-zinc-700 transition-transform group-hover:translate-x-1 group-hover:text-zinc-400" />

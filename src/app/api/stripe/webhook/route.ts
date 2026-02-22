@@ -4,8 +4,6 @@ import { getStripe } from "@/lib/stripe/server";
 import { PLANS, type PlanId } from "@/lib/stripe/plans";
 import type Stripe from "stripe";
 
-export const dynamic = "force-dynamic";
-
 // Use service role client to bypass RLS
 function getServiceClient() {
   return createClient(
@@ -117,9 +115,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     p_user_id: userId,
     p_new_limit: freePlan.limits.monthlyCredits,
     p_period_start: new Date().toISOString(),
-    p_period_end: new Date(
-      Date.now() + 30 * 24 * 60 * 60 * 1000
-    ).toISOString(),
+    p_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
   });
 }
 
@@ -130,9 +126,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   const subDetails = invoice.parent?.subscription_details;
   const subscriptionRef = subDetails?.subscription;
   const subscriptionId =
-    typeof subscriptionRef === "string"
-      ? subscriptionRef
-      : subscriptionRef?.id;
+    typeof subscriptionRef === "string" ? subscriptionRef : subscriptionRef?.id;
 
   if (!subscriptionId) return;
 

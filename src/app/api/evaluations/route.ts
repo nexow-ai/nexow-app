@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(req: NextRequest) {
   try {
     const agentId = req.nextUrl.searchParams.get("agentId");
@@ -11,7 +9,9 @@ export async function GET(req: NextRequest) {
     }
 
     const supabase = await createClient();
-    const { data, error } = await (supabase.from as Function)("agent_evaluations")
+    const { data, error } = await (supabase.from as Function)(
+      "agent_evaluations"
+    )
       .select("*")
       .eq("agent_id", agentId)
       .order("created_at", { ascending: false })

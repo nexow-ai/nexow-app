@@ -11,11 +11,7 @@ import {
 import { DataSourceCards } from "@/components/agents/data-source-cards";
 import { useSession } from "@/hooks/use-session";
 import { useSubscription } from "@/hooks/use-subscription";
-import {
-  CREDIT_COSTS,
-  formatCredits,
-  isUnlimited,
-} from "@/lib/stripe/plans";
+import { CREDIT_COSTS, formatCredits, isUnlimited } from "@/lib/stripe/plans";
 import {
   INSTRUMENT_GROUPS as FALLBACK_GROUPS,
   type InstrumentGroup,
@@ -144,7 +140,11 @@ export default function NewAgentPage() {
         const res = await fetch("/api/instruments");
         if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();
-        if (!cancelled && Array.isArray(data.groups) && data.groups.length > 0) {
+        if (
+          !cancelled &&
+          Array.isArray(data.groups) &&
+          data.groups.length > 0
+        ) {
           setInstrumentGroups(data.groups);
         }
       } catch {
@@ -334,9 +334,7 @@ export default function NewAgentPage() {
         (configInstruments[0]?.timeframe as string) ?? "H1";
 
       const uniqueInstruments = instrumentsArr.map((id) => {
-        const match = configInstruments.find(
-          (ci) => ci.instrument === id
-        );
+        const match = configInstruments.find((ci) => ci.instrument === id);
         return {
           instrument: id,
           timeframe: (match?.timeframe as string) ?? "H1",
@@ -371,10 +369,10 @@ export default function NewAgentPage() {
   }
 
   // Validation
-  const canProceedFromBrain =
-    selectedInstruments.size > 0;
+  const canProceedFromBrain = selectedInstruments.size > 0;
   const canProceedFromIntelligence =
-    strategyPrompt.trim().length > 0 || STRATEGY_TEMPLATES.find((t) => t.id === "free" && strategyPrompt === "");
+    strategyPrompt.trim().length > 0 ||
+    STRATEGY_TEMPLATES.find((t) => t.id === "free" && strategyPrompt === "");
   const canProceedFromRisk =
     exitConfig.stop_loss_pct !== "" || exitConfig.take_profit_pct !== "";
 
@@ -388,7 +386,8 @@ export default function NewAgentPage() {
     !isUnlimited(plan.limits.maxAgents) &&
     subscription.agentCount >= plan.limits.maxAgents;
   const noCredits =
-    subscription && subscription.creditsRemaining < CREDIT_COSTS.agentGeneration;
+    subscription &&
+    subscription.creditsRemaining < CREDIT_COSTS.agentGeneration;
   const agentBlocked = !plan.limits.aiAgents;
 
   const styleIcons: Record<TradingStyle, typeof Shield> = {
@@ -712,8 +711,8 @@ export default function NewAgentPage() {
               Market Intelligence
             </h1>
             <p className="mt-1 text-sm text-zinc-400">
-              Configure the data your agent sees and describe how it should think
-              about the market.
+              Configure the data your agent sees and describe how it should
+              think about the market.
             </p>
           </div>
 
@@ -759,8 +758,9 @@ export default function NewAgentPage() {
               Strategy Logic
             </label>
             <p className="mb-3 text-xs text-zinc-500">
-              Describe how your agent should analyze and trade. Be as specific or
-              as open as you want — the agent will reason within these guidelines.
+              Describe how your agent should analyze and trade. Be as specific
+              or as open as you want — the agent will reason within these
+              guidelines.
             </p>
 
             {/* Quick-start templates */}
@@ -1004,7 +1004,9 @@ export default function NewAgentPage() {
                       </p>
                       <div className="mt-0.5 flex items-center gap-1.5">
                         <Sparkles className="h-3 w-3 text-purple-400" />
-                        <span className="text-xs text-zinc-300">{llmModel}</span>
+                        <span className="text-xs text-zinc-300">
+                          {llmModel}
+                        </span>
                         <span className="text-[10px] text-zinc-600">
                           ({llmProvider})
                         </span>
@@ -1073,7 +1075,8 @@ export default function NewAgentPage() {
                       </span>
                     </div>
 
-                    {(exitConfig.stop_loss_pct || exitConfig.take_profit_pct) && (
+                    {(exitConfig.stop_loss_pct ||
+                      exitConfig.take_profit_pct) && (
                       <div>
                         <p className="text-[10px] uppercase tracking-wider text-zinc-600">
                           Risk
@@ -1100,9 +1103,7 @@ export default function NewAgentPage() {
                 {/* Generate / Deploy section */}
                 {!generated ? (
                   <div className="space-y-3">
-                    {error && (
-                      <p className="text-sm text-red-400">{error}</p>
-                    )}
+                    {error && <p className="text-sm text-red-400">{error}</p>}
                     <Button
                       onClick={handleGenerate}
                       loading={generating}
@@ -1130,7 +1131,8 @@ export default function NewAgentPage() {
                       ) : (
                         <>
                           <Sparkles className="h-4 w-4" />
-                          Generate Agent ({CREDIT_COSTS.agentGeneration} credits)
+                          Generate Agent ({CREDIT_COSTS.agentGeneration}{" "}
+                          credits)
                         </>
                       )}
                     </Button>
@@ -1154,8 +1156,8 @@ export default function NewAgentPage() {
                         <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-2">
                           <p className="text-[10px] text-zinc-600">Exit</p>
                           <p className="text-xs text-zinc-300">
-                            SL: {generatedExitConfig?.stop_loss_pct ?? "—"}% / TP:{" "}
-                            {generatedExitConfig?.take_profit_pct ?? "—"}%
+                            SL: {generatedExitConfig?.stop_loss_pct ?? "—"}% /
+                            TP: {generatedExitConfig?.take_profit_pct ?? "—"}%
                           </p>
                         </div>
                         <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-2">
@@ -1185,9 +1187,7 @@ export default function NewAgentPage() {
                       </p>
                     </div>
 
-                    {error && (
-                      <p className="text-sm text-red-400">{error}</p>
-                    )}
+                    {error && <p className="text-sm text-red-400">{error}</p>}
 
                     <div className="flex gap-2">
                       <Button

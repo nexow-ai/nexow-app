@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-export const dynamic = "force-dynamic";
-
 export async function GET() {
   try {
     const supabase = await createClient();
@@ -53,8 +51,16 @@ export async function GET() {
         .eq("status", "active"),
     ]);
 
-    const sub = subResult.data as { tier: string; status: string; cancel_at_period_end: boolean; current_period_end: string | null } | null;
-    const credits = creditsResult.data as { credits_limit: number; credits_used: number } | null;
+    const sub = subResult.data as {
+      tier: string;
+      status: string;
+      cancel_at_period_end: boolean;
+      current_period_end: string | null;
+    } | null;
+    const credits = creditsResult.data as {
+      credits_limit: number;
+      credits_used: number;
+    } | null;
 
     return NextResponse.json({
       tier: sub?.tier ?? "free",

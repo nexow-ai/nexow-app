@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(req: NextRequest) {
   try {
     const supabase = await createClient();
@@ -10,7 +8,10 @@ export async function GET(req: NextRequest) {
     const instrument = req.nextUrl.searchParams.get("instrument");
 
     const from = (supabase.from as Function).bind(supabase);
-    let query = from("trades").select("*").order("opened_at", { ascending: false }).limit(500);
+    let query = from("trades")
+      .select("*")
+      .order("opened_at", { ascending: false })
+      .limit(500);
     if (agentId) query = query.eq("agent_id", agentId);
     if (instrument) query = query.eq("instrument", instrument);
 
@@ -36,9 +37,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const { trades: tradesPayload } = (await req.json()) as { trades: unknown[] };
+    const { trades: tradesPayload } = (await req.json()) as {
+      trades: unknown[];
+    };
     if (!Array.isArray(tradesPayload) || tradesPayload.length === 0) {
-      return NextResponse.json({ error: "trades array required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "trades array required" },
+        { status: 400 }
+      );
     }
 
     const from = (supabase.from as Function).bind(supabase);

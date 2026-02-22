@@ -13,8 +13,8 @@ export default function CopyTradingPage() {
           <h1 className="text-2xl font-bold text-zinc-100">Copy Trading</h1>
         </div>
         <p className="mt-1 text-sm text-zinc-400">
-          Follow top-performing agents and copy their trades automatically.
-          The strategy stays hidden — you only see the results.
+          Follow top-performing agents and copy their trades automatically. The
+          strategy stays hidden — you only see the results.
         </p>
       </div>
 
@@ -54,7 +54,9 @@ export default function CopyTradingPage() {
               </div>
               <div>
                 <p className="text-xs text-zinc-500">Copy P&L</p>
-                <p className="text-xl font-bold text-zinc-100">{formatCurrency(0)}</p>
+                <p className="text-xl font-bold text-zinc-100">
+                  {formatCurrency(0)}
+                </p>
               </div>
             </div>
           </CardContent>

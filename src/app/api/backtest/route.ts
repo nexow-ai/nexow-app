@@ -1,9 +1,6 @@
 import { NextRequest } from "next/server";
 
-export const dynamic = "force-dynamic";
-
-const NEXOW_API_URL =
-  process.env.NEXOW_API_URL || "http://localhost:8000";
+const NEXOW_API_URL = process.env.NEXOW_API_URL || "http://localhost:8000";
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,7 +16,10 @@ export async function POST(request: NextRequest) {
       const errorText = await engineResponse.text();
       return new Response(
         JSON.stringify({ error: `Engine error: ${errorText}` }),
-        { status: engineResponse.status, headers: { "Content-Type": "application/json" } }
+        {
+          status: engineResponse.status,
+          headers: { "Content-Type": "application/json" },
+        }
       );
     }
 
