@@ -10,7 +10,8 @@
     "preview": "vercel",
     "deploy": "vercel --prod",
     "preview:cf": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy:cf": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
+    "deploy:cf": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.16.5",
@@ -38,6 +39,8 @@
     "@types/three": "^0.182.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "eslint-config-prettier": "^10",
+    "prettier": "^3",
     "tailwindcss": "^4",
     "typescript": "^5",
     "wrangler": "^4.65.0"
