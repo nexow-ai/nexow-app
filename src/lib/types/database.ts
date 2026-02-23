@@ -359,6 +359,101 @@ export type Database = {
           metadata?: Json;
         };
       };
+      reactor_configs: {
+        Row: {
+          id: string;
+          user_id: string;
+          instrument: string;
+          trades_per_day: number;
+          risk_mode: "percentage" | "fixed";
+          risk_value: number;
+          timeframe: string;
+          weight_technical: number;
+          weight_momentum: number;
+          weight_fundamental: number;
+          weight_structure: number;
+          weight_session: number;
+          confidence_threshold: number;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          instrument?: string;
+          trades_per_day?: number;
+          risk_mode?: "percentage" | "fixed";
+          risk_value?: number;
+          timeframe?: string;
+          weight_technical?: number;
+          weight_momentum?: number;
+          weight_fundamental?: number;
+          weight_structure?: number;
+          weight_session?: number;
+          confidence_threshold?: number;
+          is_active?: boolean;
+        };
+        Update: {
+          instrument?: string;
+          trades_per_day?: number;
+          risk_mode?: "percentage" | "fixed";
+          risk_value?: number;
+          timeframe?: string;
+          weight_technical?: number;
+          weight_momentum?: number;
+          weight_fundamental?: number;
+          weight_structure?: number;
+          weight_session?: number;
+          confidence_threshold?: number;
+          is_active?: boolean;
+        };
+      };
+      snapshot_analyses: {
+        Row: {
+          id: string;
+          instrument: string;
+          timestamp: string;
+          technical_score: number;
+          momentum_score: number;
+          fundamental_score: number;
+          structure_score: number;
+          session_score: number;
+          overall_score: number;
+          direction: string;
+          reasoning: string | null;
+          prompt_tokens: number;
+          completion_tokens: number;
+          llm_model: string | null;
+          duration_ms: number | null;
+          created_at: string;
+        };
+        Insert: {
+          instrument: string;
+          timestamp: string;
+          technical_score?: number;
+          momentum_score?: number;
+          fundamental_score?: number;
+          structure_score?: number;
+          session_score?: number;
+          overall_score?: number;
+          direction?: string;
+          reasoning?: string | null;
+          prompt_tokens?: number;
+          completion_tokens?: number;
+          llm_model?: string | null;
+          duration_ms?: number | null;
+        };
+        Update: {
+          technical_score?: number;
+          momentum_score?: number;
+          fundamental_score?: number;
+          structure_score?: number;
+          session_score?: number;
+          overall_score?: number;
+          direction?: string;
+          reasoning?: string | null;
+        };
+      };
       backtests: {
         Row: {
           id: string;
