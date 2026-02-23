@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import {
+  BarChart3,
   // Bot,
   Brain,
   Copy,
@@ -19,6 +20,7 @@ import { Logo } from "./logo";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Markets", href: "/markets", icon: BarChart3 },
   { name: "Strategy Labs", href: "/labs", icon: FlaskConical },
   { name: "My Bots", href: "/bots", icon: Zap },
   { name: "My Agents", href: "/agents", icon: Brain },
