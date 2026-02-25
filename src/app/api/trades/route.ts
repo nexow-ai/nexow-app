@@ -5,6 +5,7 @@ export async function GET(req: NextRequest) {
   try {
     const supabase = await createClient();
     const agentId = req.nextUrl.searchParams.get("agentId");
+    const reactorConfigId = req.nextUrl.searchParams.get("reactorConfigId");
     const instrument = req.nextUrl.searchParams.get("instrument");
 
     const from = (supabase.from as Function).bind(supabase);
@@ -13,6 +14,7 @@ export async function GET(req: NextRequest) {
       .order("opened_at", { ascending: false })
       .limit(500);
     if (agentId) query = query.eq("agent_id", agentId);
+    if (reactorConfigId) query = query.eq("reactor_config_id", reactorConfigId);
     if (instrument) query = query.eq("instrument", instrument);
 
     const { data, error } = await query;

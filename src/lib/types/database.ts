@@ -92,7 +92,8 @@ export type Database = {
       trades: {
         Row: {
           id: string;
-          agent_id: string;
+          agent_id: string | null;
+          reactor_config_id: string | null;
           instrument: string;
           direction: "buy" | "sell";
           entry_price: number;
@@ -107,7 +108,8 @@ export type Database = {
           evaluation_id: string | null;
         };
         Insert: {
-          agent_id: string;
+          agent_id?: string | null;
+          reactor_config_id?: string | null;
           instrument: string;
           direction: "buy" | "sell";
           entry_price: number;
