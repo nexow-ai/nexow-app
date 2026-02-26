@@ -7,6 +7,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import type { ReactorConfig } from "@/hooks/use-reactor";
+import { useReactorAnalyses, type M1Analysis } from "@/hooks/use-reactor-analyses";
 import { useReactorTrades, type Trade } from "@/hooks/use-trades";
 import { WEIGHT_SECTIONS } from "./reactor-form";
 import { Loader2, Pause, Play } from "lucide-react";
@@ -56,64 +57,50 @@ function hexWithWeightOpacity(hex: string, weight: number): string {
   return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 }
 
-// Seeded pseudo-random for stable mock data
-function seededRandom(seed: number) {
-  const x = Math.sin(seed) * 10000;
-  return x - Math.floor(x);
-}
+/** Map domain key to the ai_* column name in M1Analysis */
+const DOMAIN_AI_KEY: Record<string, keyof M1Analysis> = {
+  technical: "ai_technical",
+  momentum: "ai_momentum",
+  fundamental: "ai_fundamental",
+  structure: "ai_structure",
+  session: "ai_session",
+};
 
 /**
- * Generate a single M1 score from a deterministic seed based on domain + timestamp.
+ * Aggregate M1 analyses into timeframe candles.
+ * Returns one time series per domain (scores normalized to 0..1).
  */
-function m1ScoreAt(domainIndex: number, minuteTs: number): number {
-  const seed = domainIndex * 100003 + Math.floor(minuteTs / 60);
-  return Math.round(seededRandom(seed) * 1000) / 1000;
-}
-
-/**
- * Generate mock M1 raw scores, then aggregate into the user's timeframe.
- * Seeds are timestamp-based so data is stable.
- */
-function generateMockTimeSeries(
-  domainIndex: number,
+function aggregateAnalyses(
+  analyses: M1Analysis[],
+  domainKey: string,
   timeframe: string,
-  closedCandleCount = 50
 ): { time: number; value: number }[] {
+  if (analyses.length === 0) return [];
+
   const interval = TF_INTERVAL[timeframe] ?? 60;
-  const m1PerCandle = Math.max(1, interval / 60);
+  const aiKey = DOMAIN_AI_KEY[domainKey];
 
-  const now = Math.floor(Date.now() / 1000);
-  const currentCandleOpen = now - (now % interval);
-  const elapsedM1 = Math.max(1, Math.floor((now - currentCandleOpen) / 60) + 1);
-
-  const firstCandleOpen = currentCandleOpen - closedCandleCount * interval;
-
-  // Aggregate into candles by averaging M1 scores
-  const data: { time: number; value: number }[] = [];
-
-  for (let c = 0; c < closedCandleCount; c++) {
-    const candleOpen = firstCandleOpen + c * interval;
-    let sum = 0;
-    for (let j = 0; j < m1PerCandle; j++) {
-      sum += m1ScoreAt(domainIndex, candleOpen + j * 60);
-    }
-    data.push({
-      time: candleOpen,
-      value: Math.round((sum / m1PerCandle) * 1000) / 1000,
-    });
+  // Group M1 rows into candle buckets
+  const buckets = new Map<number, number[]>();
+  for (const a of analyses) {
+    const ts = Math.floor(new Date(a.ts).getTime() / 1000);
+    const candleOpen = ts - (ts % interval);
+    const score = Number(a[aiKey] ?? 0);
+    // Convert -1..+1 → 0..1
+    const normalized = (score + 1) / 2;
+    const bucket = buckets.get(candleOpen);
+    if (bucket) bucket.push(normalized);
+    else buckets.set(candleOpen, [normalized]);
   }
 
-  // Current candle (provisional)
-  let partialSum = 0;
-  for (let j = 0; j < elapsedM1; j++) {
-    partialSum += m1ScoreAt(domainIndex, currentCandleOpen + j * 60);
+  // Average each bucket and sort by time
+  const result: { time: number; value: number }[] = [];
+  for (const [time, scores] of buckets) {
+    const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+    result.push({ time, value: Math.round(avg * 1000) / 1000 });
   }
-  data.push({
-    time: currentCandleOpen,
-    value: Math.round((partialSum / elapsedM1) * 1000) / 1000,
-  });
-
-  return data;
+  result.sort((a, b) => a.time - b.time);
+  return result;
 }
 
 // ─── ConfluenceChart ─────────────────────────────────────────────────────────
@@ -349,6 +336,7 @@ function ConfluenceChart({
 
 interface M1DetailProps {
   domains: { key: string; color: string; weight: number }[];
+  analyses: M1Analysis[];
   candleTime: number;
   interval: number;
   confidenceThreshold: number;
@@ -356,11 +344,17 @@ interface M1DetailProps {
   onClose: () => void;
 }
 
-function M1DetailChart({ domains, candleTime, interval, confidenceThreshold, hiddenDomains, onClose }: M1DetailProps) {
+function M1DetailChart({ domains, analyses, candleTime, interval, confidenceThreshold, hiddenDomains, onClose }: M1DetailProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ReturnType<typeof import("lightweight-charts").createChart> | null>(null);
 
-  const m1Count = Math.max(1, interval / 60);
+  // Filter M1 analyses that fall within this candle
+  const candleM1 = useMemo(() => {
+    return analyses.filter((a) => {
+      const ts = Math.floor(new Date(a.ts).getTime() / 1000);
+      return ts >= candleTime && ts < candleTime + interval;
+    });
+  }, [analyses, candleTime, interval]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -391,15 +385,14 @@ function M1DetailChart({ domains, candleTime, interval, confidenceThreshold, hid
         value: d.value,
       });
 
-      // Generate M1 points on-the-fly for each domain
-      const domainIdx = (key: string) => WEIGHT_SECTIONS.findIndex((s) => s.key === key);
-
+      // Plot real M1 data for each domain
       for (const dom of domains) {
-        const idx = domainIdx(dom.key);
-        const pts: { time: number; value: number }[] = [];
-        for (let j = 0; j < m1Count; j++) {
-          pts.push({ time: candleTime + j * 60, value: m1ScoreAt(idx, candleTime + j * 60) });
-        }
+        const aiKey = DOMAIN_AI_KEY[dom.key];
+        const pts = candleM1.map((a) => {
+          const ts = Math.floor(new Date(a.ts).getTime() / 1000);
+          const score = Number(a[aiKey] ?? 0);
+          return { time: ts, value: Math.round(((score + 1) / 2) * 1000) / 1000 };
+        });
         const series = chart.addSeries(LineSeries, {
           color: hexWithWeightOpacity(dom.color, dom.weight),
           lineWidth: 1,
@@ -413,13 +406,16 @@ function M1DetailChart({ domains, candleTime, interval, confidenceThreshold, hid
       }
 
       // Overall weighted M1 line
-      const overallPts: { time: number; value: number }[] = [];
-      for (let j = 0; j < m1Count; j++) {
-        const t = candleTime + j * 60;
+      const overallPts = candleM1.map((a) => {
+        const ts = Math.floor(new Date(a.ts).getTime() / 1000);
         let w = 0;
-        for (const dom of domains) w += m1ScoreAt(domainIdx(dom.key), t) * dom.weight;
-        overallPts.push({ time: t, value: Math.round(w * 1000) / 1000 });
-      }
+        for (const dom of domains) {
+          const aiKey = DOMAIN_AI_KEY[dom.key];
+          const score = Number(a[aiKey] ?? 0);
+          w += ((score + 1) / 2) * dom.weight;
+        }
+        return { time: ts, value: Math.round(w * 1000) / 1000 };
+      });
       const overallSeries = chart.addSeries(LineSeries, {
         color: "#e4e4e7",
         lineWidth: 2,
@@ -456,7 +452,7 @@ function M1DetailChart({ domains, candleTime, interval, confidenceThreshold, hid
       chartRef.current = null;
       if (containerRef.current) containerRef.current.innerHTML = "";
     };
-  }, [domains, candleTime, m1Count, confidenceThreshold, hiddenDomains]);
+  }, [domains, candleM1, candleTime, confidenceThreshold, hiddenDomains]);
 
   const fmt = (ts: number) => new Date(ts * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
@@ -484,17 +480,25 @@ export function ReactorInsights({ config, onToggleActive, toggleLoading }: React
   const [hiddenDomains, setHiddenDomains] = useState<Set<string>>(new Set());
   const [selectedCandle, setSelectedCandle] = useState<number | null>(null);
 
-  // Generate domain data per timeframe
+  const { analyses, loading: analysesLoading, refetch: refetchAnalyses } = useReactorAnalyses(config.instrument);
+
+  // Auto-refresh analyses every 60s
+  useEffect(() => {
+    const id = setInterval(refetchAnalyses, 60_000);
+    return () => clearInterval(id);
+  }, [refetchAnalyses]);
+
+  // Aggregate M1 analyses into domain time series
   const domainData = useMemo(
     () =>
-      WEIGHT_SECTIONS.map((section, idx) => ({
+      WEIGHT_SECTIONS.map((section) => ({
         key: section.key,
         label: section.label,
         color: DOMAIN_COLORS[section.key],
         weight: config[WEIGHT_MAP[section.key]] as number,
-        data: generateMockTimeSeries(idx, config.timeframe),
+        data: aggregateAnalyses(analyses, section.key, config.timeframe),
       })),
-    [config]
+    [analyses, config]
   );
 
   // closedCount = total points - 1 (last point is the provisional candle)
@@ -530,8 +534,24 @@ export function ReactorInsights({ config, onToggleActive, toggleLoading }: React
 
   // Overall score = last point of overallData
   const overallScore = overallData.length > 0 ? overallData[overallData.length - 1].value : 0;
-  const directionIndex = overallScore >= 0.6 ? 2 : overallScore >= 0.4 ? 1 : 0;
-  const direction = DIRECTION_LABELS[directionIndex];
+
+  // Direction from latest M1 analysis majority vote
+  const direction = useMemo(() => {
+    if (analyses.length === 0) return "HOLD";
+    // Take latest candle's M1 analyses
+    const interval = TF_INTERVAL[config.timeframe] ?? 60;
+    const lastTs = Math.floor(new Date(analyses[analyses.length - 1].ts).getTime() / 1000);
+    const candleOpen = lastTs - (lastTs % interval);
+    const candleAnalyses = analyses.filter((a) => {
+      const ts = Math.floor(new Date(a.ts).getTime() / 1000);
+      return ts >= candleOpen && ts < candleOpen + interval;
+    });
+    const buys = candleAnalyses.filter((a) => a.ai_direction === "buy").length;
+    const sells = candleAnalyses.filter((a) => a.ai_direction === "sell").length;
+    if (buys > sells) return "BUY";
+    if (sells > buys) return "SELL";
+    return "HOLD";
+  }, [analyses, config.timeframe]);
 
   function toggleDomain(key: string) {
     setHiddenDomains((prev) => {
@@ -596,9 +616,11 @@ export function ReactorInsights({ config, onToggleActive, toggleLoading }: React
               {direction}
             </div>
           </div>
-          <p className="mt-2 text-xs text-zinc-600">
-            Placeholder data — real scores will appear once the reactor engine is connected.
-          </p>
+          {analyses.length === 0 && !analysesLoading && (
+            <p className="mt-2 text-xs text-zinc-600">
+              No analyses yet — scores will appear once the LLM engine produces data.
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -650,7 +672,17 @@ export function ReactorInsights({ config, onToggleActive, toggleLoading }: React
         {/* Confluence chart */}
         <Card>
           <CardContent className="py-4 space-y-0">
-            <ConfluenceChart
+            {analysesLoading && analyses.length === 0 && (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-5 w-5 animate-spin text-zinc-500" />
+              </div>
+            )}
+            {!analysesLoading && analyses.length === 0 && (
+              <p className="py-16 text-center text-sm text-zinc-500">
+                No analyses yet. Data will appear once the LLM engine is running.
+              </p>
+            )}
+            {analyses.length > 0 && <ConfluenceChart
               domainData={domainData}
               overallData={overallData}
               confluenceData={confluenceData}
@@ -658,11 +690,12 @@ export function ReactorInsights({ config, onToggleActive, toggleLoading }: React
               hiddenDomains={hiddenDomains}
               closedCount={closedCount}
               onCandleClick={(t) => setSelectedCandle((prev) => prev === t ? null : t)}
-            />
+            />}
 
             {selectedCandle !== null && (TF_INTERVAL[config.timeframe] ?? 60) > 60 && (
               <M1DetailChart
                 domains={domainData}
+                analyses={analyses}
                 candleTime={selectedCandle}
                 interval={TF_INTERVAL[config.timeframe] ?? 60}
                 confidenceThreshold={config.confidence_threshold}
