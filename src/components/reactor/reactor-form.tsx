@@ -15,8 +15,11 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import type { ReactorConfig } from "@/hooks/use-reactor";
+import { useBalance } from "@/hooks/use-balance";
+import { WeightPreviewChart } from "./weight-preview-chart";
 
 export const INSTRUMENTS = [
   { id: "EUR_USD", label: "EUR/USD", flag: "\u{1F1EA}\u{1F1FA}\u{1F1FA}\u{1F1F8}" },
@@ -73,32 +76,110 @@ interface ReactorFormProps {
 }
 
 export function ReactorForm({ initialConfig, onSave, saving, error, onCancel }: ReactorFormProps) {
-  const [instrument, setInstrument] = useState(initialConfig?.instrument ?? "EUR_USD");
-  const [tradesPerDay, setTradesPerDay] = useState(String(initialConfig?.trades_per_day ?? 3));
-  const [riskMode, setRiskMode] = useState<RiskMode>(initialConfig?.risk_mode ?? "percentage");
-  const [riskValue, setRiskValue] = useState(String(initialConfig?.risk_value ?? 1.0));
-  const [timeframe, setTimeframe] = useState(initialConfig?.timeframe ?? "H1");
+  const { balance } = useBalance();
+  const searchParams = useSearchParams();
+
+  // Read initial values: initialConfig (edit mode) > URL params > defaults
+  const qInstrument = searchParams.get("instrument");
+  const qTimeframe = searchParams.get("tf");
+  const qRiskMode = searchParams.get("rm");
+  const qRiskValue = searchParams.get("rv");
+  const qRewardRatio = searchParams.get("rr");
+  const qThreshold = searchParams.get("ct");
+  const qTradesPerDay = searchParams.get("tpd");
+  const qWt = searchParams.get("wt");
+  const qWm = searchParams.get("wm");
+  const qWf = searchParams.get("wf");
+  const qWs = searchParams.get("ws");
+  const qWse = searchParams.get("wse");
+
+  const [instrument, setInstrument] = useState(
+    initialConfig?.instrument ?? qInstrument ?? "EUR_USD"
+  );
+  const [tradesPerDay, setTradesPerDay] = useState(
+    String(initialConfig?.trades_per_day ?? qTradesPerDay ?? 3)
+  );
+  const [riskMode, setRiskMode] = useState<RiskMode>(
+    initialConfig?.risk_mode ?? (qRiskMode === "fixed" ? "fixed" : "percentage")
+  );
+  const [riskValue, setRiskValue] = useState(
+    String(initialConfig?.risk_value ?? qRiskValue ?? 1.0)
+  );
+  const [timeframe, setTimeframe] = useState(
+    initialConfig?.timeframe ?? qTimeframe ?? "H1"
+  );
   const [weights, setWeights] = useState<Record<WeightKey, number>>({
-    technical: initialConfig?.weight_technical ?? DEFAULT_WEIGHTS.technical,
-    momentum: initialConfig?.weight_momentum ?? DEFAULT_WEIGHTS.momentum,
-    fundamental: initialConfig?.weight_fundamental ?? DEFAULT_WEIGHTS.fundamental,
-    structure: initialConfig?.weight_structure ?? DEFAULT_WEIGHTS.structure,
-    session: initialConfig?.weight_session ?? DEFAULT_WEIGHTS.session,
+    technical: initialConfig?.weight_technical ?? (qWt != null ? parseFloat(qWt) : DEFAULT_WEIGHTS.technical),
+    momentum: initialConfig?.weight_momentum ?? (qWm != null ? parseFloat(qWm) : DEFAULT_WEIGHTS.momentum),
+    fundamental: initialConfig?.weight_fundamental ?? (qWf != null ? parseFloat(qWf) : DEFAULT_WEIGHTS.fundamental),
+    structure: initialConfig?.weight_structure ?? (qWs != null ? parseFloat(qWs) : DEFAULT_WEIGHTS.structure),
+    session: initialConfig?.weight_session ?? (qWse != null ? parseFloat(qWse) : DEFAULT_WEIGHTS.session),
   });
   const [confidenceThreshold, setConfidenceThreshold] = useState(
-    initialConfig?.confidence_threshold ?? 0.60
+    initialConfig?.confidence_threshold ?? (qThreshold != null ? parseFloat(qThreshold) : 0.60)
   );
-  const [rewardRatio, setRewardRatio] = useState(String(initialConfig?.reward_ratio ?? 2.0));
+  const [rewardRatio, setRewardRatio] = useState(
+    String(initialConfig?.reward_ratio ?? qRewardRatio ?? 2.0)
+  );
   const [validationError, setValidationError] = useState("");
 
-  const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
-  const totalPct = Math.round(totalWeight * 100);
+  // Sync form state → URL search params (replaceState to avoid history spam)
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    // Skip the initial render to avoid replacing URL before user interacts
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    params.set("instrument", instrument);
+    params.set("tf", timeframe);
+    params.set("rm", riskMode);
+    params.set("rv", riskValue);
+    params.set("rr", rewardRatio);
+    params.set("ct", String(confidenceThreshold));
+    params.set("tpd", tradesPerDay);
+    params.set("wt", String(weights.technical));
+    params.set("wm", String(weights.momentum));
+    params.set("wf", String(weights.fundamental));
+    params.set("ws", String(weights.structure));
+    params.set("wse", String(weights.session));
+    const url = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState(null, "", url);
+  }, [instrument, timeframe, riskMode, riskValue, rewardRatio, confidenceThreshold, tradesPerDay, weights]);
 
   const updateWeight = (key: WeightKey, raw: number) => {
-    setWeights((prev) => ({
-      ...prev,
-      [key]: Math.round(Math.min(1, Math.max(0, raw)) * 100) / 100,
-    }));
+    setWeights((prev) => {
+      const clamped = Math.round(Math.min(1, Math.max(0, raw)) * 100) / 100;
+      const others = Object.entries(prev).filter(([k]) => k !== key);
+      const othersSum = others.reduce((s, [, v]) => s + v, 0);
+
+      // If all others are 0, just set the value (can't redistribute)
+      if (othersSum === 0) {
+        return { ...prev, [key]: clamped };
+      }
+
+      // Redistribute remaining (1 - clamped) proportionally across others
+      const remaining = Math.round((1 - clamped) * 100) / 100;
+      const scale = remaining / othersSum;
+      const next: Record<string, number> = { [key]: clamped };
+
+      let distributed = clamped;
+      const otherKeys = others.map(([k]) => k);
+      for (let i = 0; i < otherKeys.length; i++) {
+        const k = otherKeys[i];
+        if (i === otherKeys.length - 1) {
+          // Last one gets the remainder to guarantee sum = 1.00
+          next[k] = Math.round((1 - distributed) * 100) / 100;
+        } else {
+          const v = Math.round(prev[k as WeightKey] * scale * 100) / 100;
+          next[k] = v;
+          distributed += v;
+        }
+      }
+
+      return next as Record<WeightKey, number>;
+    });
   };
 
   const handleSubmit = async () => {
@@ -122,10 +203,6 @@ export function ReactorForm({ initialConfig, onSave, saving, error, onCancel }: 
     }
     if (isNaN(rr) || rr < 0.5 || rr > 10) {
       setValidationError("Reward ratio must be between 0.5 and 10");
-      return;
-    }
-    if (totalPct !== 100) {
-      setValidationError(`Weights must sum to 100% (currently ${totalPct}%)`);
       return;
     }
 
@@ -356,18 +433,8 @@ export function ReactorForm({ initialConfig, onSave, saving, error, onCancel }: 
             Analysis Weights
           </CardTitle>
           <CardDescription>
-            Adjust the importance of each analysis domain.{" "}
-            <span className={cn(
-              "font-semibold",
-              totalPct === 100 ? "text-emerald-400" : "text-red-400"
-            )}>
-              {totalPct}%
-            </span>
-            {totalPct !== 100 && (
-              <span className="text-red-400/70">
-                {" "}— must be 100% to save
-              </span>
-            )}
+            Adjust the importance of each analysis domain. Weights auto-normalize to{" "}
+            <span className="font-semibold text-emerald-400">100%</span>.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -418,6 +485,21 @@ export function ReactorForm({ initialConfig, onSave, saving, error, onCancel }: 
           </div>
         </CardContent>
       </Card>
+
+      {/* Signal Preview */}
+      <WeightPreviewChart
+        instrument={instrument}
+        timeframe={timeframe}
+        weights={weights}
+        confidenceThreshold={confidenceThreshold}
+        riskMode={riskMode}
+        riskValue={parseFloat(riskValue) || 1.0}
+        rewardRatio={parseFloat(rewardRatio) || 2.0}
+        tradesPerDay={parseInt(tradesPerDay) || 3}
+        balance={balance}
+        onWeightsChange={(w) => setWeights(w as Record<WeightKey, number>)}
+        onThresholdChange={(t) => setConfidenceThreshold(t)}
+      />
 
       {/* Error */}
       {displayError && (

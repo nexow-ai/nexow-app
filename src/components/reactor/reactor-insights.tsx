@@ -10,6 +10,16 @@ import type { ReactorConfig } from "@/hooks/use-reactor";
 import { useReactorAnalyses, type M1Analysis } from "@/hooks/use-reactor-analyses";
 import { useReactorTrades, type Trade } from "@/hooks/use-trades";
 import { WEIGHT_SECTIONS } from "./reactor-form";
+import {
+  TF_INTERVAL,
+  DOMAIN_COLORS,
+  WEIGHT_MAP,
+  DOMAIN_AI_KEY,
+  hexWithWeightOpacity,
+  aggregateAnalyses,
+  aggregateOHLC,
+  type OHLCCandle,
+} from "@/lib/reactor-utils";
 import { Loader2, Pause, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -22,93 +32,13 @@ interface ReactorInsightsProps {
 
 const DIRECTION_LABELS = ["SELL", "HOLD", "BUY"] as const;
 
-const TF_INTERVAL: Record<string, number> = {
-  M1: 60,
-  M5: 300,
-  M15: 900,
-  H1: 3600,
-  H4: 14400,
-  D: 86400,
-};
-
-const DOMAIN_COLORS: Record<string, string> = {
-  technical: "#10b981",
-  momentum: "#06b6d4",
-  fundamental: "#f59e0b",
-  structure: "#8b5cf6",
-  session: "#f43f5e",
-};
-
-const WEIGHT_MAP: Record<string, keyof ReactorConfig> = {
-  technical: "weight_technical",
-  momentum: "weight_momentum",
-  fundamental: "weight_fundamental",
-  structure: "weight_structure",
-  session: "weight_session",
-};
-
-/** Convert hex color to rgba, with opacity derived from user weight.
- *  weight 0.10 → 0.3 opacity, weight 0.30+ → 1.0 */
-function hexWithWeightOpacity(hex: string, weight: number): string {
-  const opacity = Math.max(0.3, Math.min(1, weight * 3));
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-}
-
-/** Map domain key to the ai_* column name in M1Analysis */
-const DOMAIN_AI_KEY: Record<string, keyof M1Analysis> = {
-  technical: "ai_technical",
-  momentum: "ai_momentum",
-  fundamental: "ai_fundamental",
-  structure: "ai_structure",
-  session: "ai_session",
-};
-
-/**
- * Aggregate M1 analyses into timeframe candles.
- * Returns one time series per domain (scores normalized to 0..1).
- */
-function aggregateAnalyses(
-  analyses: M1Analysis[],
-  domainKey: string,
-  timeframe: string,
-): { time: number; value: number }[] {
-  if (analyses.length === 0) return [];
-
-  const interval = TF_INTERVAL[timeframe] ?? 60;
-  const aiKey = DOMAIN_AI_KEY[domainKey];
-
-  // Group M1 rows into candle buckets
-  const buckets = new Map<number, number[]>();
-  for (const a of analyses) {
-    const ts = Math.floor(new Date(a.ts).getTime() / 1000);
-    const candleOpen = ts - (ts % interval);
-    const score = Number(a[aiKey] ?? 0);
-    // Convert -1..+1 → 0..1
-    const normalized = (score + 1) / 2;
-    const bucket = buckets.get(candleOpen);
-    if (bucket) bucket.push(normalized);
-    else buckets.set(candleOpen, [normalized]);
-  }
-
-  // Average each bucket and sort by time
-  const result: { time: number; value: number }[] = [];
-  for (const [time, scores] of buckets) {
-    const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
-    result.push({ time, value: Math.round(avg * 1000) / 1000 });
-  }
-  result.sort((a, b) => a.time - b.time);
-  return result;
-}
-
 // ─── ConfluenceChart ─────────────────────────────────────────────────────────
 
 interface ConfluenceChartProps {
   domainData: { key: string; color: string; weight: number; data: { time: number; value: number }[] }[];
   overallData: { time: number; value: number }[];
   confluenceData: { time: number; value: number }[];
+  ohlcData: OHLCCandle[];
   confidenceThreshold: number;
   hiddenDomains: Set<string>;
   closedCount: number;
@@ -119,6 +49,7 @@ function ConfluenceChart({
   domainData,
   overallData,
   confluenceData,
+  ohlcData,
   confidenceThreshold,
   hiddenDomains,
   closedCount,
@@ -143,7 +74,7 @@ function ConfluenceChart({
     let cancelled = false;
 
     const init = async () => {
-      const { createChart, LineSeries, AreaSeries, ColorType, LineStyle } =
+      const { createChart, LineSeries, AreaSeries, CandlestickSeries, ColorType, LineStyle } =
         await import("lightweight-charts");
 
       if (cancelled || !containerRef.current) return;
@@ -155,7 +86,7 @@ function ConfluenceChart({
 
       const chart = createChart(containerRef.current, {
         width: containerRef.current.clientWidth,
-        height: 350,
+        height: 450,
         layout: {
           background: { type: ColorType.Solid, color: "transparent" },
           textColor: "#71717a",
@@ -170,6 +101,10 @@ function ConfluenceChart({
           autoScale: false,
           scaleMargins: { top: 0.02, bottom: 0.02 },
         },
+        leftPriceScale: {
+          borderColor: "rgba(63, 63, 70, 0.5)",
+          visible: true,
+        },
         timeScale: {
           borderColor: "rgba(63, 63, 70, 0.5)",
           timeVisible: true,
@@ -181,6 +116,28 @@ function ConfluenceChart({
       });
 
       chartRef.current = chart;
+
+      // 0. Candlestick series (left price scale)
+      if (ohlcData.length > 0) {
+        const candleSeries = chart.addSeries(CandlestickSeries, {
+          upColor: "#10b981",
+          downColor: "#ef4444",
+          borderDownColor: "#ef4444",
+          borderUpColor: "#10b981",
+          wickDownColor: "#ef4444",
+          wickUpColor: "#10b981",
+          priceScaleId: "left",
+        });
+        candleSeries.setData(
+          ohlcData.map((d) => ({
+            time: d.time as import("lightweight-charts").Time,
+            open: d.open,
+            high: d.high,
+            low: d.low,
+            close: d.close,
+          }))
+        );
+      }
 
       const fixedRange = () => ({
         priceRange: { minValue: 0, maxValue: 1 },
@@ -325,10 +282,10 @@ function ConfluenceChart({
     };
     // hiddenDomains excluded — handled by the separate effect above
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [domainData, overallData, confluenceData, confidenceThreshold, closedCount]);
+  }, [domainData, overallData, confluenceData, ohlcData, confidenceThreshold, closedCount]);
 
   return (
-    <div ref={containerRef} className="h-[350px] w-full overflow-hidden" />
+    <div ref={containerRef} className="h-[450px] w-full overflow-hidden" />
   );
 }
 
@@ -499,6 +456,12 @@ export function ReactorInsights({ config, onToggleActive, toggleLoading }: React
         data: aggregateAnalyses(analyses, section.key, config.timeframe),
       })),
     [analyses, config]
+  );
+
+  // Aggregate OHLC candles for the price chart
+  const ohlcData = useMemo(
+    () => aggregateOHLC(analyses, config.timeframe),
+    [analyses, config.timeframe],
   );
 
   // closedCount = total points - 1 (last point is the provisional candle)
@@ -686,11 +649,24 @@ export function ReactorInsights({ config, onToggleActive, toggleLoading }: React
               domainData={domainData}
               overallData={overallData}
               confluenceData={confluenceData}
+              ohlcData={ohlcData}
               confidenceThreshold={config.confidence_threshold}
               hiddenDomains={hiddenDomains}
               closedCount={closedCount}
               onCandleClick={(t) => setSelectedCandle((prev) => prev === t ? null : t)}
             />}
+
+            {analyses.length > 0 && (
+              <div className="flex flex-wrap items-center gap-4 pt-2 text-[10px] text-zinc-600">
+                <span>Left: Price (OHLC)</span>
+                <span className="text-zinc-800">|</span>
+                <span>Right: AI Scores (0 to 1)</span>
+                <span className="text-zinc-800">|</span>
+                <span className="flex items-center gap-1">
+                  <span className="inline-block h-0.5 w-3 bg-zinc-200" /> Overall
+                </span>
+              </div>
+            )}
 
             {selectedCandle !== null && (TF_INTERVAL[config.timeframe] ?? 60) > 60 && (
               <M1DetailChart

@@ -1,6 +1,7 @@
 "use client";
 
-import { ReactorCard } from "@/components/reactor/reactor-card";
+import { ReactorPanel } from "@/components/reactor/reactor-panel";
+import { ReactorOverview } from "@/components/reactor/reactor-overview";
 import { Button } from "@/components/ui/button";
 import { useReactorConfigs } from "@/hooks/use-reactor";
 import { Activity, Loader2, Plus } from "lucide-react";
@@ -27,6 +28,9 @@ export default function ReactorPage() {
           </Button>
         </Link>
       </div>
+
+      {/* Live market overview: price chart + AI scores */}
+      <ReactorOverview instrument="EUR_USD" />
 
       {loading && (
         <div className="flex items-center justify-center py-24">
@@ -60,9 +64,9 @@ export default function ReactorPage() {
       )}
 
       {!loading && configs.length > 0 && (
-        <div className="stagger-children grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="space-y-4">
           {configs.map((config) => (
-            <ReactorCard key={config.id} config={config} />
+            <ReactorPanel key={config.id} config={config} />
           ))}
         </div>
       )}

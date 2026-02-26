@@ -1,0 +1,390 @@
+"use client";
+
+import { Badge } from "@/components/ui/badge";
+import type { ReactorConfig } from "@/hooks/use-reactor";
+import { useReactorAnalyses } from "@/hooks/use-reactor-analyses";
+import { useReactorTrades } from "@/hooks/use-trades";
+import { WEIGHT_SECTIONS } from "./reactor-form";
+import {
+  TF_INTERVAL,
+  DOMAIN_COLORS,
+  WEIGHT_MAP,
+  DOMAIN_AI_KEY,
+  hexWithWeightOpacity,
+  aggregateAnalyses,
+} from "@/lib/reactor-utils";
+import { cn } from "@/lib/utils";
+import { ChevronRight, ExternalLink, Loader2, Pencil } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+
+interface ReactorPanelProps {
+  config: ReactorConfig;
+}
+
+function formatDuration(ms: number): string {
+  if (ms < 60_000) return "<1m";
+  const mins = Math.floor(ms / 60_000);
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  const remMins = mins % 60;
+  if (hrs < 24) return remMins > 0 ? `${hrs}h ${remMins}m` : `${hrs}h`;
+  const days = Math.floor(hrs / 24);
+  const remHrs = hrs % 24;
+  return remHrs > 0 ? `${days}d ${remHrs}h` : `${days}d`;
+}
+
+export function ReactorPanel({ config }: ReactorPanelProps) {
+  const [reasoningOpen, setReasoningOpen] = useState(false);
+
+  const { analyses, loading: analysesLoading, refetch: refetchAnalyses } =
+    useReactorAnalyses(config.instrument, 500);
+  const { trades, loading: tradesLoading, refetch: refetchTrades } =
+    useReactorTrades(config.id);
+
+  // Auto-refresh analyses every 60s, trades every 30s
+  useEffect(() => {
+    const aId = setInterval(refetchAnalyses, 60_000);
+    const tId = setInterval(refetchTrades, 30_000);
+    return () => {
+      clearInterval(aId);
+      clearInterval(tId);
+    };
+  }, [refetchAnalyses, refetchTrades]);
+
+  // Aggregate domain data
+  const domainData = useMemo(
+    () =>
+      WEIGHT_SECTIONS.map((section) => ({
+        key: section.key,
+        label: section.label,
+        color: DOMAIN_COLORS[section.key],
+        weight: config[WEIGHT_MAP[section.key]] as number,
+        data: aggregateAnalyses(analyses, section.key, config.timeframe),
+      })),
+    [analyses, config],
+  );
+
+  // Compute overall weighted score per timestamp
+  const overallData = useMemo(() => {
+    if (domainData.length === 0 || domainData[0].data.length === 0) return [];
+    const count = domainData[0].data.length;
+    const result: { time: number; value: number }[] = [];
+    for (let i = 0; i < count; i++) {
+      const time = domainData[0].data[i].time;
+      let weighted = 0;
+      for (const d of domainData) {
+        if (d.data[i]) weighted += d.data[i].value * d.weight;
+      }
+      result.push({ time, value: Math.round(weighted * 1000) / 1000 });
+    }
+    return result;
+  }, [domainData]);
+
+  // Overall score = last point
+  const overallScore =
+    overallData.length > 0 ? overallData[overallData.length - 1].value : 0;
+
+  // Direction from latest M1 analysis majority vote
+  const direction = useMemo(() => {
+    if (analyses.length === 0) return "HOLD";
+    const interval = TF_INTERVAL[config.timeframe] ?? 60;
+    const lastTs = Math.floor(
+      new Date(analyses[analyses.length - 1].ts).getTime() / 1000,
+    );
+    const candleOpen = lastTs - (lastTs % interval);
+    const candleAnalyses = analyses.filter((a) => {
+      const ts = Math.floor(new Date(a.ts).getTime() / 1000);
+      return ts >= candleOpen && ts < candleOpen + interval;
+    });
+    const buys = candleAnalyses.filter((a) => a.ai_direction === "buy").length;
+    const sells = candleAnalyses.filter(
+      (a) => a.ai_direction === "sell",
+    ).length;
+    if (buys > sells) return "BUY";
+    if (sells > buys) return "SELL";
+    return "HOLD";
+  }, [analyses, config.timeframe]);
+
+  // Above/below threshold
+  const aboveThreshold = overallScore >= config.confidence_threshold;
+
+  // Last AI reasoning
+  const lastReasoning = useMemo(() => {
+    if (analyses.length === 0) return null;
+    // Search from the end for the first analysis with ai_reasoning
+    for (let i = analyses.length - 1; i >= 0; i--) {
+      if (analyses[i].ai_reasoning) {
+        return {
+          text: analyses[i].ai_reasoning!,
+          ts: analyses[i].ts,
+        };
+      }
+    }
+    return null;
+  }, [analyses]);
+
+  // Trades
+  const openTrades = useMemo(
+    () => trades.filter((t) => t.status === "open"),
+    [trades],
+  );
+  const closedTrades = useMemo(
+    () => trades.filter((t) => t.status === "closed"),
+    [trades],
+  );
+  const totalPnl = closedTrades.reduce(
+    (sum, t) => sum + (t.return_pct ?? 0),
+    0,
+  );
+  const winCount = closedTrades.filter(
+    (t) => (t.return_pct ?? 0) > 0,
+  ).length;
+  const winRate =
+    closedTrades.length > 0 ? (winCount / closedTrades.length) * 100 : 0;
+
+  // Domain scores (last value)
+  const domainScores = domainData.map((d) => ({
+    ...d,
+    lastScore: d.data.length > 0 ? d.data[d.data.length - 1].value : 0,
+  }));
+
+  const isLoading = analysesLoading && analyses.length === 0;
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-zinc-800/40 bg-zinc-900/30 backdrop-blur-sm">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-zinc-800/40 px-5 py-3">
+        <div className="flex items-center gap-3">
+          <span
+            className={cn(
+              "inline-block h-2.5 w-2.5 rounded-full",
+              config.is_active ? "bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.5)]" : "bg-zinc-600",
+            )}
+          />
+          <span className="font-semibold text-zinc-100">
+            {config.instrument.replace("_", "/")}
+          </span>
+          <span className="rounded-md bg-zinc-800/80 px-2 py-0.5 text-[11px] font-semibold text-zinc-400">
+            {config.timeframe}
+          </span>
+          <Badge variant={config.is_active ? "success" : "default"}>
+            {config.is_active ? "Active" : "Inactive"}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/reactor/${config.id}?tab=edit`}
+            className="flex items-center gap-1.5 rounded-lg border border-zinc-800/60 px-3 py-1.5 text-xs font-medium text-zinc-400 transition-all hover:border-zinc-700/60 hover:text-zinc-200"
+          >
+            <Pencil className="h-3 w-3" />
+            Edit
+          </Link>
+          <Link
+            href={`/reactor/${config.id}`}
+            className="flex items-center gap-1.5 rounded-lg border border-zinc-800/60 px-3 py-1.5 text-xs font-medium text-zinc-400 transition-all hover:border-emerald-500/30 hover:text-emerald-400"
+          >
+            <ExternalLink className="h-3 w-3" />
+            Full View
+          </Link>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="px-5 py-4 space-y-4">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-5 w-5 animate-spin text-zinc-500" />
+          </div>
+        ) : (
+          <>
+            {/* Score + Direction */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <span className="text-xs uppercase tracking-wider text-zinc-500">
+                  Overall
+                </span>
+                <span className="text-2xl font-bold text-zinc-100">
+                  {overallScore.toFixed(2)}
+                </span>
+              </div>
+              <div
+                className={cn(
+                  "rounded-lg px-3 py-1 text-xs font-bold",
+                  direction === "BUY" && "bg-emerald-500/15 text-emerald-400",
+                  direction === "SELL" && "bg-red-500/15 text-red-400",
+                  direction === "HOLD" && "bg-yellow-500/15 text-yellow-400",
+                )}
+              >
+                {direction}
+              </div>
+              <span
+                className={cn(
+                  "text-xs",
+                  aboveThreshold ? "text-emerald-400/70" : "text-zinc-500",
+                )}
+              >
+                vs threshold{" "}
+                {config.confidence_threshold.toFixed(2)}
+                {aboveThreshold ? " (above)" : " (below)"}
+              </span>
+              {analyses.length === 0 && (
+                <span className="text-xs text-zinc-600">
+                  No analyses yet
+                </span>
+              )}
+            </div>
+
+            {/* Domain score badges */}
+            <div className="flex flex-wrap gap-2">
+              {domainScores.map((d) => (
+                <div
+                  key={d.key}
+                  className="flex items-center gap-1.5 rounded-lg border border-zinc-800/50 bg-zinc-800/30 px-2.5 py-1 text-xs"
+                >
+                  <span
+                    className="inline-block h-2 w-2 rounded-full"
+                    style={{
+                      backgroundColor: hexWithWeightOpacity(
+                        d.color,
+                        d.weight,
+                      ),
+                    }}
+                  />
+                  <span className="text-zinc-400">{d.label}</span>
+                  <span className="font-mono font-semibold text-zinc-200">
+                    {d.lastScore.toFixed(2)}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Open Trades */}
+            {openTrades.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400/70">
+                  Open Trades
+                </p>
+                <div className="space-y-1.5">
+                  {openTrades.map((trade) => {
+                    const durationMs =
+                      Date.now() -
+                      new Date(trade.opened_at).getTime();
+
+                    return (
+                      <div
+                        key={trade.id}
+                        className="flex items-center gap-3 rounded-lg bg-zinc-800/30 px-3 py-2 text-xs"
+                      >
+                        <Badge
+                          variant={
+                            trade.direction === "buy" ? "success" : "danger"
+                          }
+                        >
+                          {trade.direction.toUpperCase()}
+                        </Badge>
+                        <span className="font-mono text-zinc-300">
+                          @ {trade.entry_price.toFixed(5)}
+                        </span>
+                        <span className="text-zinc-600">|</span>
+                        <span className="text-zinc-500">
+                          {trade.stop_loss_pct != null && (
+                            <span className="text-red-400/70">
+                              SL -{trade.stop_loss_pct.toFixed(2)}%
+                            </span>
+                          )}
+                          {trade.stop_loss_pct != null &&
+                            trade.take_profit_pct != null &&
+                            " / "}
+                          {trade.take_profit_pct != null && (
+                            <span className="text-emerald-400/70">
+                              TP +{trade.take_profit_pct.toFixed(2)}%
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-zinc-600">|</span>
+                        <span className="text-zinc-400">
+                          {formatDuration(durationMs)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Trade history summary */}
+            {closedTrades.length > 0 && (
+              <div className="flex items-center gap-3 text-xs text-zinc-500">
+                <span>
+                  History: {closedTrades.length} closed
+                </span>
+                <span className="text-zinc-700">|</span>
+                <span>
+                  Win rate{" "}
+                  <span className="font-semibold text-zinc-300">
+                    {winRate.toFixed(0)}%
+                  </span>
+                </span>
+                <span className="text-zinc-700">|</span>
+                <span>
+                  PnL{" "}
+                  <span
+                    className={cn(
+                      "font-semibold",
+                      totalPnl >= 0
+                        ? "text-emerald-400"
+                        : "text-red-400",
+                    )}
+                  >
+                    {totalPnl >= 0 ? "+" : ""}
+                    {totalPnl.toFixed(2)}%
+                  </span>
+                </span>
+              </div>
+            )}
+
+            {!tradesLoading &&
+              trades.length === 0 &&
+              openTrades.length === 0 && (
+                <p className="text-xs text-zinc-600">
+                  No trades yet.
+                </p>
+              )}
+
+            {/* AI Reasoning collapsible */}
+            {lastReasoning && (
+              <div className="border-t border-zinc-800/40 pt-3">
+                <button
+                  onClick={() => setReasoningOpen(!reasoningOpen)}
+                  className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-200"
+                >
+                  <ChevronRight
+                    className={cn(
+                      "h-3.5 w-3.5 transition-transform",
+                      reasoningOpen && "rotate-90",
+                    )}
+                  />
+                  AI Reasoning
+                  <span className="ml-1 text-zinc-600">
+                    {new Date(lastReasoning.ts).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </button>
+                {reasoningOpen && (
+                  <div className="mt-2 rounded-lg bg-zinc-800/30 px-3 py-2.5">
+                    <p className="whitespace-pre-wrap text-xs leading-relaxed text-zinc-300">
+                      {lastReasoning.text}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
