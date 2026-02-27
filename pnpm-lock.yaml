@@ -81,6 +81,9 @@ importers:
       eslint-config-prettier:
         specifier: ^10
         version: 10.1.8(eslint@9.39.2(jiti@2.6.1))
+      fancy-canvas:
+        specifier: ^2.1.0
+        version: 2.1.0
       prettier:
         specifier: ^3
         version: 3.8.1
