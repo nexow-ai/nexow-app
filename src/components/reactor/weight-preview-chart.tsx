@@ -47,11 +47,31 @@ export function WeightPreviewChart({
   onWeightsChange,
   onThresholdChange,
 }: WeightPreviewChartProps) {
+  const BACKTEST_RANGES = [
+    { label: "6H", hours: 6 },
+    { label: "12H", hours: 12 },
+    { label: "1D", hours: 24 },
+    { label: "3D", hours: 72 },
+    { label: "1W", hours: 168 },
+    { label: "1M", hours: 720 },
+    { label: "All", hours: 0 },
+  ];
+  const [backtestRangeHours, setBacktestRangeHours] = useState<number>(72);
   const [backtestFrom, setBacktestFrom] = useState<string>("");
+
+  // Compute the from date: custom date picker takes priority, otherwise range preset
+  const computedFrom = useMemo(() => {
+    if (backtestFrom) return backtestFrom;
+    if (backtestRangeHours > 0) {
+      return new Date(Date.now() - backtestRangeHours * 3600_000).toISOString();
+    }
+    return undefined;
+  }, [backtestFrom, backtestRangeHours]);
+
   const { analyses, loading } = useReactorAnalyses(
     instrument,
     50000,
-    backtestFrom || undefined,
+    computedFrom,
   );
   const [activeTab, setActiveTab] = useState<"chart" | "trades">("chart");
   const [optimizing, setOptimizing] = useState(false);
@@ -105,16 +125,21 @@ export function WeightPreviewChart({
     return result;
   }, [overallData]);
 
-  // OHLC candles
+  // OHLC candles (at selected timeframe for signals, M1 for tick-level SL/TP)
   const ohlcData = useMemo(
     () => aggregateOHLC(analyses, timeframe),
     [analyses, timeframe],
   );
+  const m1Candles = useMemo(
+    () => timeframe === "M1" ? ohlcData : aggregateOHLC(analyses, "M1"),
+    [analyses, timeframe, ohlcData],
+  );
 
-  // Run backtest simulation
+  // Run backtest simulation (M1 ticks for precise SL/TP)
   const backtest = useMemo<BacktestResult>(() => {
     return runBacktest({
       ohlcCandles: ohlcData,
+      m1Candles: timeframe !== "M1" ? m1Candles : undefined,
       overallScores: overallData,
       directions: directionData,
       confidenceThreshold,
@@ -123,7 +148,7 @@ export function WeightPreviewChart({
       rewardRatio,
       tradesPerDay,
     });
-  }, [ohlcData, overallData, directionData, confidenceThreshold, riskMode, riskValue, rewardRatio, tradesPerDay]);
+  }, [ohlcData, m1Candles, timeframe, overallData, directionData, confidenceThreshold, riskMode, riskValue, rewardRatio, tradesPerDay]);
 
   const handleOptimize = useCallback(() => {
     if (!onWeightsChange || overallData.length === 0) return;
@@ -135,6 +160,7 @@ export function WeightPreviewChart({
       const result = optimizeWeights({
         domainScores: domainData.map((d) => ({ key: d.key, data: d.data })),
         ohlcCandles: ohlcData,
+        m1Candles: timeframe !== "M1" ? m1Candles : undefined,
         riskMode,
         riskValue,
         rewardRatio,
@@ -155,7 +181,7 @@ export function WeightPreviewChart({
         setOptimizeMsg("Not enough data to optimize");
       }
     }, 50);
-  }, [domainData, ohlcData, riskMode, riskValue, rewardRatio, tradesPerDay, onWeightsChange, onThresholdChange, overallData.length]);
+  }, [domainData, ohlcData, m1Candles, timeframe, riskMode, riskValue, rewardRatio, tradesPerDay, onWeightsChange, onThresholdChange, overallData.length]);
 
   const totalCandles = overallData.length;
 
@@ -524,45 +550,64 @@ export function WeightPreviewChart({
             <Eye className="h-4 w-4 text-emerald-400" />
             Signal Preview
           </CardTitle>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900/50 px-2 py-1">
-              <span className="text-[10px] text-zinc-500">From</span>
-              <input
-                type="date"
-                value={backtestFrom}
-                onChange={(e) => setBacktestFrom(e.target.value)}
-                className="h-5 bg-transparent text-xs text-zinc-300 outline-none [color-scheme:dark]"
-              />
-            </div>
-            {onWeightsChange && (
+          {onWeightsChange && (
+            <button
+              onClick={handleOptimize}
+              disabled={optimizing || overallData.length === 0}
+              className={cn(
+                "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all",
+                "border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20",
+                "disabled:cursor-not-allowed disabled:opacity-50"
+              )}
+            >
+              {optimizing ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Sparkles className="h-3 w-3" />
+              )}
+              {optimizing ? "Optimizing..." : "Optimize"}
+            </button>
+          )}
+        </div>
+
+        {/* Backtest range presets + date picker */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center rounded-lg border border-zinc-800 bg-zinc-900/50 p-0.5">
+            {BACKTEST_RANGES.map((r) => (
               <button
-                onClick={handleOptimize}
-                disabled={optimizing || overallData.length === 0}
+                key={r.label}
+                onClick={() => { setBacktestRangeHours(r.hours); setBacktestFrom(""); }}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all",
-                  "border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20",
-                  "disabled:cursor-not-allowed disabled:opacity-50"
+                  "rounded-md px-2 py-1 text-xs font-medium transition-all",
+                  !backtestFrom && backtestRangeHours === r.hours
+                    ? "bg-zinc-700 text-zinc-100"
+                    : "text-zinc-500 hover:text-zinc-300"
                 )}
               >
-                {optimizing ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <Sparkles className="h-3 w-3" />
-                )}
-                {optimizing ? "Optimizing..." : "Optimize"}
+                {r.label}
               </button>
-            )}
+            ))}
           </div>
-        </div>
-        <CardDescription>
-          Simulated backtest with position sizing (rising edge entry, ATR-based SL/TP, one trade at a time).
+
+          <span className="text-zinc-800">|</span>
+
+          <div className="flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900/50 px-2 py-0.5">
+            <span className="text-[10px] text-zinc-500">From</span>
+            <input
+              type="date"
+              value={backtestFrom}
+              onChange={(e) => setBacktestFrom(e.target.value)}
+              className="h-5 bg-transparent text-xs text-zinc-300 outline-none [color-scheme:dark]"
+            />
+          </div>
+
           {analyses.length > 0 && (
-            <span className="ml-1 text-zinc-400">
-              {analyses.length} analyzed candles
-              {backtestFrom && ` from ${new Date(backtestFrom).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`}
+            <span className="text-[10px] text-zinc-500">
+              {analyses.length} candles
             </span>
           )}
-        </CardDescription>
+        </div>
+
         {optimizeMsg && (
           <p className="text-[10px] text-amber-400/80">{optimizeMsg}</p>
         )}

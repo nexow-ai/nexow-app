@@ -4,7 +4,7 @@ import { ReactorForm, type ReactorFormPayload } from "@/components/reactor/react
 import { ReactorInsights } from "@/components/reactor/reactor-insights";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { useReactorConfig } from "@/hooks/use-reactor";
 import { cn } from "@/lib/utils";
@@ -38,9 +38,8 @@ export default function ReactorDetailPage({ params }: ReactorDetailPageProps) {
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [snapshotData, setSnapshotData] = useState<string | null>(null);
-  const [snapshotLoading, setSnapshotLoading] = useState(false);
-  const [snapshotError, setSnapshotError] = useState("");
+
+
 
   function setTab(tab: Tab) {
     const url = tab === "edit" ? `/reactor/${id}?tab=edit` : `/reactor/${id}`;
@@ -115,7 +114,7 @@ export default function ReactorDetailPage({ params }: ReactorDetailPageProps) {
           className="mb-4 inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to configs
+          Back to overview
         </Link>
 
         <div className="flex items-center justify-between">
@@ -190,47 +189,8 @@ export default function ReactorDetailPage({ params }: ReactorDetailPageProps) {
             onCancel={() => router.push("/reactor")}
           />
 
-          {/* Test Snapshot */}
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              size="lg"
-              loading={snapshotLoading}
-              onClick={async () => {
-                setSnapshotLoading(true);
-                setSnapshotError("");
-                setSnapshotData(null);
-                try {
-                  const res = await fetch(`/api/snapshot?instrument=${config.instrument}`);
-                  if (!res.ok) {
-                    const err = await res.json();
-                    throw new Error(err.detail || "Snapshot unavailable");
-                  }
-                  const data = await res.json();
-                  setSnapshotData(JSON.stringify(data, null, 2));
-                } catch (err) {
-                  setSnapshotError(err instanceof Error ? err.message : "Failed to fetch snapshot");
-                } finally {
-                  setSnapshotLoading(false);
-                }
-              }}
-            >
-              Test Snapshot
-            </Button>
-          </div>
 
-          {snapshotError && (
-            <p className="text-sm text-red-400">{snapshotError}</p>
-          )}
-          {snapshotData && (
-            <Card>
-              <CardContent className="py-4">
-                <pre className="max-h-[600px] overflow-auto text-xs leading-relaxed text-zinc-400">
-                  {snapshotData}
-                </pre>
-              </CardContent>
-            </Card>
-          )}
+
         </div>
       ) : (
         <ReactorInsights

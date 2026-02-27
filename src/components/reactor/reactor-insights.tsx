@@ -22,7 +22,22 @@ import {
 } from "@/lib/reactor-utils";
 import { Loader2, Pause, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+const TIMEFRAMES = ["M1", "M5", "M15", "H1", "H4", "D1"] as const;
+
+const RANGE_PRESETS: Record<string, { label: string; hours: number }[]> = {
+  M1:  [{ label: "3H", hours: 3 }, { label: "6H", hours: 6 }, { label: "12H", hours: 12 }],
+  M5:  [{ label: "12H", hours: 12 }, { label: "1D", hours: 24 }, { label: "3D", hours: 72 }],
+  M15: [{ label: "1D", hours: 24 }, { label: "3D", hours: 72 }, { label: "1W", hours: 168 }],
+  H1:  [{ label: "3D", hours: 72 }, { label: "1W", hours: 168 }, { label: "1M", hours: 720 }],
+  H4:  [{ label: "1W", hours: 168 }, { label: "1M", hours: 720 }, { label: "3M", hours: 2160 }],
+  D1:  [{ label: "1M", hours: 720 }, { label: "3M", hours: 2160 }, { label: "1Y", hours: 8760 }],
+};
+
+const DEFAULT_RANGE: Record<string, number> = {
+  M1: 3, M5: 24, M15: 72, H1: 168, H4: 720, D1: 2160,
+};
 
 interface ReactorInsightsProps {
   config: ReactorConfig;
@@ -62,7 +77,7 @@ function ConfluenceChart({
   // Update visibility without recreating chart
   useEffect(() => {
     for (const [key, series] of seriesMapRef.current) {
-      if (key === "overall" || key === "confluence") continue;
+      if (key === "confluence") continue;
       const baseKey = key.includes(":") ? key.split(":")[0] : key;
       series.applyOptions({ visible: !hiddenDomains.has(baseKey) });
     }
@@ -221,6 +236,7 @@ function ConfluenceChart({
         crosshairMarkerRadius: 4,
         lastValueVisible: false,
         priceLineVisible: false,
+        visible: !hiddenDomains.has("overall"),
       });
       overallSeries.setData(overallClosed.map(toChart));
       overallSeries.applyOptions({ autoscaleInfoProvider: fixedRange });
@@ -436,8 +452,22 @@ function M1DetailChart({ domains, analyses, candleTime, interval, confidenceThre
 export function ReactorInsights({ config, onToggleActive, toggleLoading }: ReactorInsightsProps) {
   const [hiddenDomains, setHiddenDomains] = useState<Set<string>>(new Set());
   const [selectedCandle, setSelectedCandle] = useState<number | null>(null);
+  const [viewTimeframe, setViewTimeframe] = useState<string>(config.timeframe);
+  const [rangeHours, setRangeHours] = useState<number>(DEFAULT_RANGE[config.timeframe] ?? 72);
 
-  const { analyses, loading: analysesLoading, refetch: refetchAnalyses } = useReactorAnalyses(config.instrument);
+  const handleTimeframeChange = useCallback((tf: string) => {
+    setViewTimeframe(tf);
+    setRangeHours(DEFAULT_RANGE[tf] ?? 3);
+    setSelectedCandle(null);
+  }, []);
+
+  const fromDate = useMemo(
+    () => new Date(Date.now() - rangeHours * 3600_000).toISOString(),
+    [rangeHours],
+  );
+
+  const { analyses, loading: analysesLoading, refetch: refetchAnalyses } =
+    useReactorAnalyses(config.instrument, 50000, fromDate);
 
   // Auto-refresh analyses every 60s
   useEffect(() => {
@@ -445,7 +475,7 @@ export function ReactorInsights({ config, onToggleActive, toggleLoading }: React
     return () => clearInterval(id);
   }, [refetchAnalyses]);
 
-  // Aggregate M1 analyses into domain time series
+  // Aggregate M1 analyses into domain time series using the VIEW timeframe
   const domainData = useMemo(
     () =>
       WEIGHT_SECTIONS.map((section) => ({
@@ -453,15 +483,15 @@ export function ReactorInsights({ config, onToggleActive, toggleLoading }: React
         label: section.label,
         color: DOMAIN_COLORS[section.key],
         weight: config[WEIGHT_MAP[section.key]] as number,
-        data: aggregateAnalyses(analyses, section.key, config.timeframe),
+        data: aggregateAnalyses(analyses, section.key, viewTimeframe),
       })),
-    [analyses, config]
+    [analyses, config, viewTimeframe]
   );
 
   // Aggregate OHLC candles for the price chart
   const ohlcData = useMemo(
-    () => aggregateOHLC(analyses, config.timeframe),
-    [analyses, config.timeframe],
+    () => aggregateOHLC(analyses, viewTimeframe),
+    [analyses, viewTimeframe],
   );
 
   // closedCount = total points - 1 (last point is the provisional candle)
@@ -501,8 +531,7 @@ export function ReactorInsights({ config, onToggleActive, toggleLoading }: React
   // Direction from latest M1 analysis majority vote
   const direction = useMemo(() => {
     if (analyses.length === 0) return "HOLD";
-    // Take latest candle's M1 analyses
-    const interval = TF_INTERVAL[config.timeframe] ?? 60;
+    const interval = TF_INTERVAL[viewTimeframe] ?? 60;
     const lastTs = Math.floor(new Date(analyses[analyses.length - 1].ts).getTime() / 1000);
     const candleOpen = lastTs - (lastTs % interval);
     const candleAnalyses = analyses.filter((a) => {
@@ -514,16 +543,18 @@ export function ReactorInsights({ config, onToggleActive, toggleLoading }: React
     if (buys > sells) return "BUY";
     if (sells > buys) return "SELL";
     return "HOLD";
-  }, [analyses, config.timeframe]);
+  }, [analyses, viewTimeframe]);
+
+  const ALL_SERIES_KEYS = [...domainData.map((d) => d.key), "overall"];
 
   function toggleDomain(key: string) {
     setHiddenDomains((prev) => {
       if (prev.size === 0) {
-        const next = new Set<string>(domainData.map((d) => d.key));
+        const next = new Set<string>(ALL_SERIES_KEYS);
         next.delete(key);
         return next;
       }
-      if (prev.size === domainData.length - 1 && !prev.has(key)) {
+      if (prev.size === ALL_SERIES_KEYS.length - 1 && !prev.has(key)) {
         return new Set();
       }
       const next = new Set(prev);
@@ -591,14 +622,69 @@ export function ReactorInsights({ config, onToggleActive, toggleLoading }: React
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-zinc-200">Domain Breakdown</h2>
+        </div>
 
-          <span className="rounded-md bg-zinc-800/80 px-2.5 py-1 text-[11px] font-semibold text-zinc-300">
-            {config.timeframe}
-          </span>
+        {/* Timeframe & Range selector */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center rounded-lg border border-zinc-800 bg-zinc-900/50 p-0.5">
+            {TIMEFRAMES.map((tf) => (
+              <button
+                key={tf}
+                onClick={() => handleTimeframeChange(tf)}
+                className={cn(
+                  "rounded-md px-2.5 py-1 text-xs font-medium transition-all",
+                  viewTimeframe === tf
+                    ? "bg-zinc-700 text-zinc-100"
+                    : "text-zinc-500 hover:text-zinc-300"
+                )}
+              >
+                {tf}
+              </button>
+            ))}
+          </div>
+
+          <span className="text-zinc-800">|</span>
+
+          <div className="flex items-center rounded-lg border border-zinc-800 bg-zinc-900/50 p-0.5">
+            {(RANGE_PRESETS[viewTimeframe] ?? []).map((preset) => (
+              <button
+                key={preset.label}
+                onClick={() => setRangeHours(preset.hours)}
+                className={cn(
+                  "rounded-md px-2.5 py-1 text-xs font-medium transition-all",
+                  rangeHours === preset.hours
+                    ? "bg-zinc-700 text-zinc-100"
+                    : "text-zinc-500 hover:text-zinc-300"
+                )}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Domain status badges */}
         <div className="flex flex-wrap gap-2">
+          {/* Overall toggle */}
+          <button
+            onClick={() => toggleDomain("overall")}
+            className={cn(
+              "flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all",
+              hiddenDomains.has("overall")
+                ? "border-zinc-800 bg-zinc-900/50 text-zinc-600"
+                : "border-zinc-700/50 bg-zinc-800/60 text-zinc-300 hover:border-zinc-600"
+            )}
+          >
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ backgroundColor: hiddenDomains.has("overall") ? "#3f3f46" : "#e4e4e7" }}
+            />
+            <span>Overall</span>
+            <span className={cn("font-mono", overallScore >= 0.5 ? "text-emerald-400" : "text-red-400")}>
+              {overallScore.toFixed(2)}
+            </span>
+          </button>
+
           {domainData.map((d) => {
             const lastScore = d.data.length > 0 ? d.data[d.data.length - 1].value : 0;
             const isGo = d.weight === 0 || lastScore >= 0.5;
@@ -668,12 +754,12 @@ export function ReactorInsights({ config, onToggleActive, toggleLoading }: React
               </div>
             )}
 
-            {selectedCandle !== null && (TF_INTERVAL[config.timeframe] ?? 60) > 60 && (
+            {selectedCandle !== null && (TF_INTERVAL[viewTimeframe] ?? 60) > 60 && (
               <M1DetailChart
                 domains={domainData}
                 analyses={analyses}
                 candleTime={selectedCandle}
-                interval={TF_INTERVAL[config.timeframe] ?? 60}
+                interval={TF_INTERVAL[viewTimeframe] ?? 60}
                 confidenceThreshold={config.confidence_threshold}
                 hiddenDomains={hiddenDomains}
                 onClose={() => setSelectedCandle(null)}

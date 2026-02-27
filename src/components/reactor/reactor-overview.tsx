@@ -2,7 +2,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { EyeOff, Eye, Loader2, TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -87,7 +87,6 @@ function OverviewChart({ rows, hiddenDomains }: OverviewChartProps) {
   // Toggle visibility without recreating the chart
   useEffect(() => {
     for (const [key, series] of seriesMapRef.current) {
-      if (key === "overall") continue;
       series.applyOptions({ visible: !hiddenDomains.has(key) });
     }
   }, [hiddenDomains]);
@@ -202,7 +201,7 @@ function OverviewChart({ rows, hiddenDomains }: OverviewChartProps) {
         domainSeriesRefs.push({ series: series as import("lightweight-charts").ISeriesApi<import("lightweight-charts").SeriesType>, label: domain.label, color: domain.color, key: domain.key });
       }
 
-      // 3. Overall line (always visible)
+      // 3. Overall line
       const overallSeries = chart.addSeries(LineSeries, {
         color: "#e4e4e7",
         lineWidth: 2,
@@ -211,6 +210,7 @@ function OverviewChart({ rows, hiddenDomains }: OverviewChartProps) {
         priceLineVisible: false,
         crosshairMarkerRadius: 3,
         title: "Overall",
+        visible: !hiddenDomains.has("overall"),
       });
       overallSeries.setData(
         analyzedRows.map((r) => ({
@@ -337,16 +337,20 @@ export function ReactorOverview({ instrument = "EUR_USD" }: ReactorOverviewProps
     [rows]
   );
 
+
+
+  const ALL_SERIES_KEYS = [...DOMAINS.map((d) => d.key), "overall"];
+
   function toggleDomain(key: string) {
     setHiddenDomains((prev) => {
-      // First click: isolate this domain (hide all others)
+      // First click: isolate this series (hide all others)
       if (prev.size === 0) {
-        const next = new Set<string>(DOMAINS.map((d) => d.key));
+        const next = new Set<string>(ALL_SERIES_KEYS);
         next.delete(key);
         return next;
       }
-      // If only this domain is visible, show all
-      if (prev.size === DOMAINS.length - 1 && !prev.has(key)) {
+      // If only this series is visible, show all
+      if (prev.size === ALL_SERIES_KEYS.length - 1 && !prev.has(key)) {
         return new Set();
       }
       // Otherwise, toggle
@@ -487,7 +491,50 @@ export function ReactorOverview({ instrument = "EUR_USD" }: ReactorOverviewProps
         </div>
 
         {/* Domain filter toggles */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => {
+              const allHidden = hiddenDomains.size === ALL_SERIES_KEYS.length;
+              setHiddenDomains(allHidden ? new Set() : new Set(ALL_SERIES_KEYS));
+            }}
+            className={cn(
+              "flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all",
+              hiddenDomains.size === ALL_SERIES_KEYS.length
+                ? "border-zinc-700/50 bg-zinc-800/60 text-zinc-300"
+                : "border-zinc-800 bg-zinc-900/50 text-zinc-500 hover:text-zinc-300"
+            )}
+          >
+            {hiddenDomains.size === ALL_SERIES_KEYS.length ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+            Scores
+          </button>
+
+          {/* Overall toggle */}
+          <button
+            onClick={() => toggleDomain("overall")}
+            className={cn(
+              "flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all",
+              hiddenDomains.has("overall")
+                ? "border-zinc-800 bg-zinc-900/50 text-zinc-600"
+                : "border-zinc-700/50 bg-zinc-800/60 text-zinc-300 hover:border-zinc-600"
+            )}
+          >
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ backgroundColor: hiddenDomains.has("overall") ? "#3f3f46" : "#e4e4e7" }}
+            />
+            <span>Overall</span>
+            {latestAnalyzed && (
+              <span
+                className={cn(
+                  "font-mono",
+                  Number(latestAnalyzed.ai_overall) > 0 ? "text-emerald-400" : Number(latestAnalyzed.ai_overall) < 0 ? "text-red-400" : "text-zinc-500"
+                )}
+              >
+                {Number(latestAnalyzed.ai_overall) > 0 ? "+" : ""}{Number(latestAnalyzed.ai_overall).toFixed(2)}
+              </span>
+            )}
+          </button>
+
           {DOMAINS.map((domain) => {
             const isHidden = hiddenDomains.has(domain.key);
             const score = latestAnalyzed
@@ -517,8 +564,7 @@ export function ReactorOverview({ instrument = "EUR_USD" }: ReactorOverviewProps
                       score > 0 ? "text-emerald-400" : score < 0 ? "text-red-400" : "text-zinc-500"
                     )}
                   >
-                    {score > 0 ? "+" : ""}
-                    {score.toFixed(2)}
+                    {score > 0 ? "+" : ""}{score.toFixed(2)}
                   </span>
                 )}
               </button>

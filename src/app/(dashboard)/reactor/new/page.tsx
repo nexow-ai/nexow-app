@@ -40,7 +40,7 @@ export default function NewReactorPage() {
           className="mb-4 inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to configs
+          Back to overview
         </Link>
         <h1 className="text-2xl font-bold">New Reactor Config</h1>
         <p className="text-sm text-zinc-500">

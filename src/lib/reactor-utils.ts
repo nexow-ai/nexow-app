@@ -198,6 +198,9 @@ export interface BacktestResult {
 
 interface BacktestParams {
   ohlcCandles: OHLCCandle[];
+  /** M1-level candles used for precise SL/TP checking within higher TF candles.
+   *  If not provided, SL/TP is checked on ohlcCandles only. */
+  m1Candles?: OHLCCandle[];
   overallScores: { time: number; value: number }[];
   directions: Map<number, string>;
   confidenceThreshold: number;
@@ -219,6 +222,7 @@ interface BacktestParams {
 export function runBacktest(params: BacktestParams): BacktestResult {
   const {
     ohlcCandles,
+    m1Candles,
     overallScores,
     directions,
     confidenceThreshold,
@@ -239,6 +243,21 @@ export function runBacktest(params: BacktestParams): BacktestResult {
   const scoreByTime = new Map<number, number>();
   overallScores.forEach((s) => scoreByTime.set(s.time, s.value));
 
+  // Build M1 candle index sorted by time for SL/TP tick-level checking
+  const ticks = m1Candles && m1Candles.length > 0 ? m1Candles : null;
+  // Map: tfCandleTime -> index in ticks[] where that TF candle starts
+  const tickStartForTf = new Map<number, number>();
+  if (ticks) {
+    const interval = ohlcCandles.length >= 2 ? ohlcCandles[1].time - ohlcCandles[0].time : 60;
+    let ti = 0;
+    for (let i = 0; i < ohlcCandles.length; i++) {
+      const tfTime = ohlcCandles[i].time;
+      // Advance tick pointer to the first M1 candle at or after this TF candle open
+      while (ti < ticks.length && ticks[ti].time < tfTime) ti++;
+      tickStartForTf.set(tfTime, ti);
+    }
+  }
+
   const trades: SimulatedTrade[] = [];
   const skipped: SkippedSignal[] = [];
 
@@ -248,6 +267,60 @@ export function runBacktest(params: BacktestParams): BacktestResult {
     const d = new Date(ts * 1000);
     return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
   };
+
+  /** Check SL/TP on M1 ticks between afterTfIdx (exclusive start) and the end of data.
+   *  Returns exit info or null if trade is still open. */
+  function checkSlTpOnTicks(
+    trade: { direction: "buy" | "sell"; entryPrice: number; entryTime: number; slPct: number; tpPct: number },
+    fromTfIdx: number,
+  ): { exitPrice: number; exitTime: number; exitReason: "SL" | "TP"; exitTfIdx: number } | null {
+    if (!ticks) return null;
+    const entry = trade.entryPrice;
+    const dir = trade.direction;
+    const slPrice = dir === "buy"
+      ? entry * (1 - trade.slPct / 100)
+      : entry * (1 + trade.slPct / 100);
+    const tpPrice = dir === "buy"
+      ? entry * (1 + trade.tpPct / 100)
+      : entry * (1 - trade.tpPct / 100);
+
+    // Start scanning ticks from right after entry (entry candle close = trade open, check from next tick)
+    const startTick = tickStartForTf.get(ohlcCandles[fromTfIdx].time) ?? 0;
+    // We need ticks AFTER the entry candle, so start from the next TF candle's first tick
+    const nextTfTick = fromTfIdx + 1 < ohlcCandles.length
+      ? (tickStartForTf.get(ohlcCandles[fromTfIdx + 1].time) ?? startTick)
+      : startTick;
+
+    for (let t = nextTfTick; t < ticks.length; t++) {
+      const tick = ticks[t];
+      if (dir === "buy") {
+        // Check SL first (pessimistic within same tick)
+        if (tick.low <= slPrice) {
+          // Find which TF candle this tick belongs to for durationCandles
+          return { exitPrice: slPrice, exitTime: tick.time, exitReason: "SL", exitTfIdx: findTfIdx(tick.time, fromTfIdx) };
+        }
+        if (tick.high >= tpPrice) {
+          return { exitPrice: tpPrice, exitTime: tick.time, exitReason: "TP", exitTfIdx: findTfIdx(tick.time, fromTfIdx) };
+        }
+      } else {
+        if (tick.high >= slPrice) {
+          return { exitPrice: slPrice, exitTime: tick.time, exitReason: "SL", exitTfIdx: findTfIdx(tick.time, fromTfIdx) };
+        }
+        if (tick.low <= tpPrice) {
+          return { exitPrice: tpPrice, exitTime: tick.time, exitReason: "TP", exitTfIdx: findTfIdx(tick.time, fromTfIdx) };
+        }
+      }
+    }
+    return null;
+  }
+
+  /** Find the TF candle index that contains a given M1 timestamp */
+  function findTfIdx(tickTime: number, fromIdx: number): number {
+    for (let i = fromIdx; i < ohlcCandles.length; i++) {
+      if (i + 1 >= ohlcCandles.length || ohlcCandles[i + 1].time > tickTime) return i;
+    }
+    return ohlcCandles.length - 1;
+  }
 
   let openTrade: {
     direction: "buy" | "sell";
@@ -263,15 +336,20 @@ export function runBacktest(params: BacktestParams): BacktestResult {
     const candle = ohlcCandles[i];
     const prevCandle = ohlcCandles[i - 1];
 
-    // Check SL/TP for open trade
+    // Check SL/TP for open trade on this TF candle
     if (openTrade) {
       const entry = openTrade.entryPrice;
       const dir = openTrade.direction;
 
       let exitTriggered = false;
       let exitPrice = 0;
+      let exitTime = candle.time;
       let exitReason: "SL" | "TP" = "SL";
+      let exitTfIdx = i;
 
+      // If we have M1 ticks and the trade was opened before this candle, check via tick already done
+      // (tick-level exit is handled at entry time below). Here we fall back to TF-level check
+      // for the case where no M1 data is available.
       if (dir === "buy") {
         const slPrice = entry * (1 - openTrade.slPct / 100);
         const tpPrice = entry * (1 + openTrade.tpPct / 100);
@@ -303,14 +381,13 @@ export function runBacktest(params: BacktestParams): BacktestResult {
           ? ((exitPrice - entry) / entry) * 100
           : ((entry - exitPrice) / entry) * 100;
 
-        // R-multiple: returnPct / slPct gives how many R this trade made
         const returnR = openTrade.slPct > 0
           ? Math.round((returnPct / openTrade.slPct) * 10000) / 10000
           : 0;
 
         trades.push({
           entryTime: openTrade.entryTime,
-          exitTime: candle.time,
+          exitTime,
           direction: dir,
           entryPrice: entry,
           exitPrice,
@@ -318,7 +395,7 @@ export function runBacktest(params: BacktestParams): BacktestResult {
           slPct: openTrade.slPct,
           tpPct: openTrade.tpPct,
           exitReason,
-          durationCandles: i - openTrade.entryIdx,
+          durationCandles: exitTfIdx - openTrade.entryIdx,
           atr: openTrade.atr,
           positionMultiplier: openTrade.slPct > 0
             ? Math.round((riskValue / openTrade.slPct) * 100) / 100
@@ -331,7 +408,6 @@ export function runBacktest(params: BacktestParams): BacktestResult {
 
     // Skip entry check if we have an open trade
     if (openTrade) {
-      // Track if this candle would have been a rising edge (for skipped markers)
       const cs = scoreByTime.get(candle.time);
       const ps = scoreByTime.get(prevCandle.time);
       if (cs !== undefined && ps !== undefined && ps < confidenceThreshold && cs >= confidenceThreshold) {
@@ -344,7 +420,6 @@ export function runBacktest(params: BacktestParams): BacktestResult {
     const currentScore = scoreByTime.get(candle.time);
     const prevScore = scoreByTime.get(prevCandle.time);
     if (currentScore === undefined || prevScore === undefined) {
-      // Check if score is above threshold visually but data is missing
       const cs = currentScore ?? scoreByTime.get(candle.time);
       if (cs !== undefined && cs >= confidenceThreshold) {
         skipped.push({ time: candle.time, reason: "no_score" });
@@ -352,10 +427,6 @@ export function runBacktest(params: BacktestParams): BacktestResult {
       continue;
     }
     if (!(prevScore < confidenceThreshold && currentScore >= confidenceThreshold)) {
-      // Score is above threshold but no rising edge (was already above)
-      if (currentScore >= confidenceThreshold && prevScore >= confidenceThreshold) {
-        // Don't mark every "already above" candle, only meaningful ones
-      }
       continue;
     }
 
@@ -380,27 +451,93 @@ export function runBacktest(params: BacktestParams): BacktestResult {
     if (atr <= 0) continue;
 
     const slDistance = atr * ATR_MULTIPLIER;
-    const slPct = (slDistance / candle.close) * 100;
-
-    // Position size is adjusted so that SL distance × quantity = riskValue
-    // (no SL cap — risk is managed via position sizing, not SL placement)
-
-    const tpPct = slPct * rewardRatio;
+    const slPct = Math.round(((slDistance / candle.close) * 100) * 10000) / 10000;
+    const tpPct = Math.round((slPct * rewardRatio) * 10000) / 10000;
 
     tradesPerDayCount.set(dayKey, dayCount + 1);
 
+    // If M1 ticks are available, immediately resolve this trade on tick data
+    if (ticks) {
+      const tradeInfo = { direction: dir as "buy" | "sell", entryPrice: candle.close, entryTime: candle.time, slPct, tpPct };
+      const exit = checkSlTpOnTicks(tradeInfo, i);
+      if (exit) {
+        const entry = candle.close;
+        const returnPct = (dir === "buy" || dir === "sell") && dir === "buy"
+          ? ((exit.exitPrice - entry) / entry) * 100
+          : ((entry - exit.exitPrice) / entry) * 100;
+        const returnR = slPct > 0 ? Math.round((returnPct / slPct) * 10000) / 10000 : 0;
+
+        trades.push({
+          entryTime: candle.time,
+          exitTime: exit.exitTime,
+          direction: dir as "buy" | "sell",
+          entryPrice: entry,
+          exitPrice: exit.exitPrice,
+          returnPct: Math.round(returnPct * 10000) / 10000,
+          slPct,
+          tpPct,
+          exitReason: exit.exitReason,
+          durationCandles: exit.exitTfIdx - i,
+          atr: Math.round(atr * 1e6) / 1e6,
+          positionMultiplier: slPct > 0 ? Math.round((riskValue / slPct) * 100) / 100 : 1,
+          returnR,
+        });
+        // Skip TF candles that are within this trade's duration
+        // (to detect skipped signals correctly)
+        // We don't skip here; the main loop will see openTrade is null and check for signals normally
+      } else {
+        // Trade never closed by SL/TP — close at last tick
+        const lastTick = ticks[ticks.length - 1];
+        const entry = candle.close;
+        const returnPct = dir === "buy"
+          ? ((lastTick.close - entry) / entry) * 100
+          : ((entry - lastTick.close) / entry) * 100;
+        const returnR = slPct > 0 ? Math.round((returnPct / slPct) * 10000) / 10000 : 0;
+
+        trades.push({
+          entryTime: candle.time,
+          exitTime: lastTick.time,
+          direction: dir as "buy" | "sell",
+          entryPrice: entry,
+          exitPrice: lastTick.close,
+          returnPct: Math.round(returnPct * 10000) / 10000,
+          slPct,
+          tpPct,
+          exitReason: "end",
+          durationCandles: ohlcCandles.length - 1 - i,
+          atr: Math.round(atr * 1e6) / 1e6,
+          positionMultiplier: slPct > 0 ? Math.round((riskValue / slPct) * 100) / 100 : 1,
+          returnR,
+        });
+      }
+      // Mark candles during the trade as skipped if they had a rising edge,
+      // and advance the main loop past the trade exit
+      const lastTradeExitTime = trades[trades.length - 1].exitTime;
+      for (let j = i + 1; j < ohlcCandles.length; j++) {
+        if (ohlcCandles[j].time > lastTradeExitTime) break;
+        const cs = scoreByTime.get(ohlcCandles[j].time);
+        const ps = scoreByTime.get(ohlcCandles[j - 1].time);
+        if (cs !== undefined && ps !== undefined && ps < confidenceThreshold && cs >= confidenceThreshold) {
+          skipped.push({ time: ohlcCandles[j].time, reason: "in_trade" });
+        }
+        i = j; // advance main loop past this candle
+      }
+      continue;
+    }
+
+    // No M1 ticks — use TF candles for SL/TP (legacy path)
     openTrade = {
       direction: dir as "buy" | "sell",
       entryPrice: candle.close,
       entryTime: candle.time,
       entryIdx: i,
-      slPct: Math.round(slPct * 10000) / 10000,
-      tpPct: Math.round(tpPct * 10000) / 10000,
+      slPct,
+      tpPct,
       atr: Math.round(atr * 1e6) / 1e6,
     };
   }
 
-  // Close any remaining open trade at last candle close
+  // Close any remaining open trade at last candle close (TF-level fallback)
   if (openTrade) {
     const lastCandle = ohlcCandles[ohlcCandles.length - 1];
     const entry = openTrade.entryPrice;
@@ -473,6 +610,8 @@ export interface OptimizeResult {
 export function optimizeWeights(params: {
   domainScores: { key: string; data: { time: number; value: number }[] }[];
   ohlcCandles: OHLCCandle[];
+  /** M1 candles for precise SL/TP in the final backtest (not used in the brute-force loop for perf). */
+  m1Candles?: OHLCCandle[];
   riskMode: string;
   riskValue: number;
   rewardRatio: number;
@@ -668,7 +807,7 @@ export function optimizeWeights(params: {
     directions.set(o.time, o.value >= 0.66 ? "buy" : o.value <= 0.33 ? "sell" : "hold");
   }
   const backtest = runBacktest({
-    ohlcCandles, overallScores, directions,
+    ohlcCandles, m1Candles: params.m1Candles, overallScores, directions,
     confidenceThreshold: bestThreshold, riskMode, riskValue, rewardRatio, tradesPerDay,
   });
 
