@@ -14,9 +14,36 @@ import {
   aggregateAnalyses,
 } from "@/lib/reactor-utils";
 import { cn } from "@/lib/utils";
-import { ChevronRight, ExternalLink, Loader2, Pencil } from "lucide-react";
+import { ChevronRight, ExternalLink, Loader2, Pencil, ScrollText } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+interface SignalLogEntry {
+  id: string;
+  signal_type: string;
+  confidence: number;
+  reason: string;
+  candle_ts: string;
+  created_at: string;
+  timeframe: string;
+}
+
+function useSignalLog(configId: string) {
+  const [logs, setLogs] = useState<SignalLogEntry[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchLogs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/reactor/signal-log?configId=${configId}&limit=30`);
+      const data = await res.json();
+      if (res.ok) setLogs(data.logs ?? []);
+    } catch { /* silent */ }
+    setLoading(false);
+  }, [configId]);
+
+  return { logs, loading, fetchLogs };
+}
 
 interface ReactorPanelProps {
   config: ReactorConfig;
@@ -36,6 +63,8 @@ function formatDuration(ms: number): string {
 
 export function ReactorPanel({ config }: ReactorPanelProps) {
   const [reasoningOpen, setReasoningOpen] = useState(false);
+  const [signalLogOpen, setSignalLogOpen] = useState(false);
+  const { logs: signalLogs, loading: signalLogLoading, fetchLogs } = useSignalLog(config.id);
 
   const { analyses, loading: analysesLoading, refetch: refetchAnalyses } =
     useReactorAnalyses(config.instrument, 500);
@@ -382,6 +411,90 @@ export function ReactorPanel({ config }: ReactorPanelProps) {
                 )}
               </div>
             )}
+
+            {/* Signal Log collapsible */}
+            <div className="border-t border-zinc-800/40 pt-3">
+              <button
+                onClick={() => {
+                  const opening = !signalLogOpen;
+                  setSignalLogOpen(opening);
+                  if (opening && signalLogs.length === 0) fetchLogs();
+                }}
+                className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-200"
+              >
+                <ChevronRight
+                  className={cn(
+                    "h-3.5 w-3.5 transition-transform",
+                    signalLogOpen && "rotate-90",
+                  )}
+                />
+                <ScrollText className="h-3 w-3" />
+                Signal Log
+              </button>
+              {signalLogOpen && (
+                <div className="mt-2 space-y-1">
+                  {signalLogLoading && signalLogs.length === 0 && (
+                    <div className="flex items-center gap-2 py-2 text-xs text-zinc-500">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Loading...
+                    </div>
+                  )}
+                  {!signalLogLoading && signalLogs.length === 0 && (
+                    <p className="py-2 text-xs text-zinc-600">
+                      No signal logs yet. Logs will appear once the reactor evaluates candles.
+                    </p>
+                  )}
+                  {signalLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className={cn(
+                        "flex items-start gap-2 rounded-lg px-3 py-1.5 text-[11px]",
+                        log.signal_type === "hold"
+                          ? "bg-zinc-800/20"
+                          : "bg-emerald-500/5",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "mt-0.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full",
+                          log.signal_type === "buy" && "bg-emerald-400",
+                          log.signal_type === "sell" && "bg-red-400",
+                          log.signal_type === "hold" && "bg-zinc-600",
+                        )}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={cn(
+                              "font-semibold uppercase",
+                              log.signal_type === "buy" && "text-emerald-400",
+                              log.signal_type === "sell" && "text-red-400",
+                              log.signal_type === "hold" && "text-zinc-500",
+                            )}
+                          >
+                            {log.signal_type}
+                          </span>
+                          <span className="font-mono text-zinc-500">
+                            {log.confidence.toFixed(3)}
+                          </span>
+                          <span className="text-zinc-700">
+                            {new Date(log.created_at).toLocaleString([], {
+                              month: "short",
+                              day: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-zinc-500 break-words">
+                          {log.reason}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
