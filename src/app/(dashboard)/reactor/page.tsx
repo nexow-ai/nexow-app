@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { ReactorPanel } from "@/components/reactor/reactor-panel";
 import { ReactorOverview } from "@/components/reactor/reactor-overview";
 import { Button } from "@/components/ui/button";

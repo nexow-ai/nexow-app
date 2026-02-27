@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { ReactorForm, type ReactorFormPayload } from "@/components/reactor/reactor-form";
 import { ReactorInsights } from "@/components/reactor/reactor-insights";
 import { Badge } from "@/components/ui/badge";

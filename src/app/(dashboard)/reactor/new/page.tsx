@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { ReactorForm, type ReactorFormPayload } from "@/components/reactor/reactor-form";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
