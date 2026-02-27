@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import {
+  Activity,
   // Bot,
   Brain,
   Copy,
@@ -22,6 +23,7 @@ const navigation = [
   { name: "Strategy Labs", href: "/labs", icon: FlaskConical },
   { name: "My Bots", href: "/bots", icon: Zap },
   { name: "My Agents", href: "/agents", icon: Brain },
+  { name: "Forex Reactor", href: "/reactor", icon: Activity },
   { name: "Wall of Fame", href: "/leaderboard", icon: Trophy },
   { name: "Copy Trading", href: "/copy", icon: Copy },
   { name: "Pricing", href: "/pricing", icon: Sparkles },

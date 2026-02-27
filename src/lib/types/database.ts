@@ -92,7 +92,8 @@ export type Database = {
       trades: {
         Row: {
           id: string;
-          agent_id: string;
+          agent_id: string | null;
+          reactor_config_id: string | null;
           instrument: string;
           direction: "buy" | "sell";
           entry_price: number;
@@ -107,7 +108,8 @@ export type Database = {
           evaluation_id: string | null;
         };
         Insert: {
-          agent_id: string;
+          agent_id?: string | null;
+          reactor_config_id?: string | null;
           instrument: string;
           direction: "buy" | "sell";
           entry_price: number;
@@ -357,6 +359,113 @@ export type Database = {
           level?: string;
           message?: string;
           metadata?: Json;
+        };
+      };
+      reactor_configs: {
+        Row: {
+          id: string;
+          user_id: string;
+          instrument: string;
+          trades_per_day: number;
+          risk_mode: "percentage" | "fixed";
+          risk_value: number;
+          timeframe: string;
+          weight_technical: number;
+          weight_momentum: number;
+          weight_fundamental: number;
+          weight_structure: number;
+          weight_session: number;
+          confidence_threshold: number;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          instrument?: string;
+          trades_per_day?: number;
+          risk_mode?: "percentage" | "fixed";
+          risk_value?: number;
+          timeframe?: string;
+          weight_technical?: number;
+          weight_momentum?: number;
+          weight_fundamental?: number;
+          weight_structure?: number;
+          weight_session?: number;
+          confidence_threshold?: number;
+          is_active?: boolean;
+        };
+        Update: {
+          instrument?: string;
+          trades_per_day?: number;
+          risk_mode?: "percentage" | "fixed";
+          risk_value?: number;
+          timeframe?: string;
+          weight_technical?: number;
+          weight_momentum?: number;
+          weight_fundamental?: number;
+          weight_structure?: number;
+          weight_session?: number;
+          confidence_threshold?: number;
+          is_active?: boolean;
+        };
+      };
+      forex_prices_1m: {
+        Row: {
+          id: string;
+          instrument: string;
+          ts: string;
+          open: number;
+          high: number;
+          low: number;
+          close: number;
+          volume: number;
+          source: string;
+          ai_technical: number | null;
+          ai_momentum: number | null;
+          ai_fundamental: number | null;
+          ai_structure: number | null;
+          ai_session: number | null;
+          ai_overall: number | null;
+          ai_direction: string | null;
+          ai_reasoning: string | null;
+          ai_model: string | null;
+          ai_tokens_in: number | null;
+          ai_tokens_out: number | null;
+          ai_duration_ms: number | null;
+          ai_analyzed_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          instrument: string;
+          ts: string;
+          open: number;
+          high: number;
+          low: number;
+          close: number;
+          volume?: number;
+          source?: string;
+        };
+        Update: {
+          open?: number;
+          high?: number;
+          low?: number;
+          close?: number;
+          volume?: number;
+          source?: string;
+          ai_technical?: number | null;
+          ai_momentum?: number | null;
+          ai_fundamental?: number | null;
+          ai_structure?: number | null;
+          ai_session?: number | null;
+          ai_overall?: number | null;
+          ai_direction?: string | null;
+          ai_reasoning?: string | null;
+          ai_model?: string | null;
+          ai_tokens_in?: number | null;
+          ai_tokens_out?: number | null;
+          ai_duration_ms?: number | null;
+          ai_analyzed_at?: string | null;
         };
       };
       backtests: {

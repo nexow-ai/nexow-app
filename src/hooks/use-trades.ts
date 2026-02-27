@@ -3,7 +3,7 @@
 import type { Database } from "@/lib/types/database";
 import { useCallback, useEffect, useState } from "react";
 
-type Trade = Database["public"]["Tables"]["trades"]["Row"];
+export type Trade = Database["public"]["Tables"]["trades"]["Row"];
 
 export function useTrades(agentId?: string) {
   const [trades, setTrades] = useState<Trade[]>([]);
@@ -26,6 +26,37 @@ export function useTrades(agentId?: string) {
     }
     setLoading(false);
   }, [agentId]);
+
+  useEffect(() => {
+    fetchTrades();
+  }, [fetchTrades]);
+
+  return { trades, loading, error, refetch: fetchTrades };
+}
+
+export function useReactorTrades(reactorConfigId?: string) {
+  const [trades, setTrades] = useState<Trade[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchTrades = useCallback(async () => {
+    if (!reactorConfigId) {
+      setTrades([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const res = await fetch(`/api/trades?reactorConfigId=${encodeURIComponent(reactorConfigId)}`);
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error ?? "Failed to fetch trades");
+      setTrades([]);
+    } else {
+      setError(null);
+      setTrades(data.trades ?? []);
+    }
+    setLoading(false);
+  }, [reactorConfigId]);
 
   useEffect(() => {
     fetchTrades();
