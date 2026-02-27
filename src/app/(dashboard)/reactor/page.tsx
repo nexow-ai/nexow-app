@@ -1,7 +1,5 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import { ReactorPanel } from "@/components/reactor/reactor-panel";
 import { ReactorOverview } from "@/components/reactor/reactor-overview";
 import { Button } from "@/components/ui/button";
@@ -10,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { Activity, BarChart3, Loader2, Plus, Zap } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useState } from "react";
+import { Suspense, useCallback, useState } from "react";
 
 const INSTRUMENTS = [
   { id: "EUR_USD", label: "EUR/USD" },
@@ -19,6 +17,14 @@ const INSTRUMENTS = [
 type Tab = "reactors" | "market";
 
 export default function ReactorPage() {
+  return (
+    <Suspense>
+      <ReactorContent />
+    </Suspense>
+  );
+}
+
+function ReactorContent() {
   const { configs, loading, error, refetch } = useReactorConfigs();
   const router = useRouter();
   const searchParams = useSearchParams();

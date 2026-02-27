@@ -1,14 +1,20 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import { ReactorForm, type ReactorFormPayload } from "@/components/reactor/reactor-form";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
 export default function NewReactorPage() {
+  return (
+    <Suspense>
+      <NewReactorContent />
+    </Suspense>
+  );
+}
+
+function NewReactorContent() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");

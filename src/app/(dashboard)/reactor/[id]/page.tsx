@@ -1,7 +1,5 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import { ReactorForm, type ReactorFormPayload } from "@/components/reactor/reactor-form";
 import { ReactorInsights } from "@/components/reactor/reactor-insights";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { use, useState } from "react";
+import { Suspense, use, useState } from "react";
 
 interface ReactorDetailPageProps {
   params: Promise<{ id: string }>;
@@ -29,6 +27,14 @@ type Tab = "insights" | "edit";
 
 export default function ReactorDetailPage({ params }: ReactorDetailPageProps) {
   const { id } = use(params);
+  return (
+    <Suspense>
+      <ReactorDetailContent id={id} />
+    </Suspense>
+  );
+}
+
+function ReactorDetailContent({ id }: { id: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { config, loading, error: fetchError, refetch } = useReactorConfig(id);
@@ -40,8 +46,6 @@ export default function ReactorDetailPage({ params }: ReactorDetailPageProps) {
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-
-
 
   function setTab(tab: Tab) {
     const url = tab === "edit" ? `/reactor/${id}?tab=edit` : `/reactor/${id}`;
@@ -190,9 +194,6 @@ export default function ReactorDetailPage({ params }: ReactorDetailPageProps) {
             error={error}
             onCancel={() => router.push("/reactor")}
           />
-
-
-
         </div>
       ) : (
         <ReactorInsights
