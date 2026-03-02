@@ -20,11 +20,19 @@ import {
   ShoppingCart,
   Users,
   AlertCircle,
+  Plus,
+  Pencil,
+  Trash2,
 } from "lucide-react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { Modal } from "@/components/ui/modal";
+import { Input } from "@/components/ui/input";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 
 type SaxoUser = Record<string, unknown>;
+type Account = Record<string, unknown> & { AccountKey?: string; DisplayName?: string; ClientKey?: string; AccountType?: string; Currency?: string };
 type Balance = Record<string, unknown> & { CurrencyCode?: string; CashBalance?: number; Balance?: number };
 type Position = Record<string, unknown> & { InstrumentId?: string; AssetType?: string; Amount?: number; AveragePrice?: number; MarketValue?: number };
 type Order = Record<string, unknown> & { OrderId?: string; AssetType?: string; Amount?: number; OrderType?: string; Status?: string };
@@ -39,6 +47,11 @@ export default function SaxoPage() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [clients, setClients] = useState<unknown[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [editAccount, setEditAccount] = useState<Account | null>(null);
+  const [editDisplayName, setEditDisplayName] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+  const [deleteAccount, setDeleteAccount] = useState<Account | null>(null);
 
   const saxoOk = searchParams.get("saxo") === "ok";
   const isConnected = !!user;
@@ -47,13 +60,14 @@ export default function SaxoPage() {
     setLoading(true);
     setError(null);
     try {
-      const [meRes, balancesRes, positionsRes, ordersRes, clientsRes] =
+      const [meRes, balancesRes, positionsRes, ordersRes, clientsRes, accountsRes] =
         await Promise.all([
           fetch("/api/saxo/me", { cache: "no-store" }),
           fetch("/api/saxo/balances", { cache: "no-store" }),
           fetch("/api/saxo/positions", { cache: "no-store" }),
           fetch("/api/saxo/orders", { cache: "no-store" }),
           fetch("/api/saxo/clients", { cache: "no-store" }),
+          fetch("/api/saxo/accounts", { cache: "no-store" }),
         ]);
 
       if (meRes.ok) {
@@ -87,6 +101,10 @@ export default function SaxoPage() {
       if (clientsRes.ok) {
         const d = await clientsRes.json();
         setClients(d.clients ?? []);
+      }
+      if (accountsRes.ok) {
+        const d = await accountsRes.json();
+        setAccounts(d.accounts ?? []);
       }
     } catch (e) {
       setError("Could not load Saxo data");
@@ -133,6 +151,35 @@ export default function SaxoPage() {
     n != null && Number.isFinite(n)
       ? new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
       : "—";
+
+  const openEdit = (acc: Account) => {
+    setEditAccount(acc);
+    setEditDisplayName(String(acc.DisplayName ?? acc.AccountKey ?? ""));
+  };
+
+  const saveEdit = useCallback(async () => {
+    if (!editAccount?.AccountKey) return;
+    setEditSaving(true);
+    try {
+      const res = await fetch(
+        `/api/saxo/accounts/${encodeURIComponent(editAccount.AccountKey)}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ DisplayName: editDisplayName || undefined }),
+        }
+      );
+      if (res.ok) {
+        setEditAccount(null);
+        fetchDashboard();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        setError(d.detail ?? d.error ?? "Failed to update account");
+      }
+    } finally {
+      setEditSaving(false);
+    }
+  }, [editAccount?.AccountKey, editDisplayName, fetchDashboard]);
 
   return (
     <div className="space-y-8">
@@ -241,10 +288,10 @@ export default function SaxoPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-                    Accounts / Balances
+                    Accounts
                   </p>
                   <p className="mt-2 text-2xl font-bold text-white">
-                    {balances.length}
+                    {accounts.length}
                   </p>
                 </div>
                 <div className="rounded-xl bg-emerald-500/10 p-2.5">
@@ -298,6 +345,80 @@ export default function SaxoPage() {
               </div>
             </div>
           </div>
+
+          {/* Accounts */}
+          <Card>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Wallet className="h-5 w-5 text-emerald-400" />
+                Accounts
+              </CardTitle>
+              <Link href="/saxo/onboarding">
+                <Button variant="secondary" size="sm">
+                  <Plus className="h-4 w-4" />
+                  Create account
+                </Button>
+              </Link>
+            </div>
+            <CardContent className="mt-4">
+              {accounts.length === 0 ? (
+                <p className="py-6 text-sm text-zinc-500">
+                  No accounts. Create one via onboarding to add a new client and
+                  account.
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Display name</TableHead>
+                      <TableHead>Account key</TableHead>
+                      <TableHead>Client</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead className="w-[120px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {accounts.map((acc, i) => (
+                      <TableRow key={acc.AccountKey ?? i}>
+                        <TableCell className="font-medium">
+                          {String(acc.DisplayName ?? acc.AccountKey ?? "—")}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-zinc-400">
+                          {String(acc.AccountKey ?? "—")}
+                        </TableCell>
+                        <TableCell className="text-zinc-400">
+                          {String(acc.ClientKey ?? "—")}
+                        </TableCell>
+                        <TableCell className="text-zinc-400">
+                          {String(acc.AccountType ?? acc.Currency ?? "—")}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-zinc-400 hover:text-zinc-200"
+                              onClick={() => openEdit(acc)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-zinc-400 hover:text-red-400"
+                              onClick={() => setDeleteAccount(acc)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Balances */}
           <Card>
@@ -434,6 +555,45 @@ export default function SaxoPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Edit account modal */}
+          <Modal
+            open={!!editAccount}
+            onClose={() => setEditAccount(null)}
+            title="Edit account"
+          >
+            <div className="space-y-4">
+              <Input
+                label="Display name"
+                value={editDisplayName}
+                onChange={(e) => setEditDisplayName(e.target.value)}
+                placeholder={editAccount?.AccountKey as string}
+              />
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setEditAccount(null)}
+                  disabled={editSaving}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={saveEdit} loading={editSaving}>
+                  Save
+                </Button>
+              </div>
+            </div>
+          </Modal>
+
+          {/* Delete / close account info modal */}
+          <ConfirmModal
+            open={!!deleteAccount}
+            onClose={() => setDeleteAccount(null)}
+            onConfirm={() => setDeleteAccount(null)}
+            title="Close account"
+            message="Account closure is not available through Nexow. To close an account, please contact Saxo Bank or use their platform (saxobank.com) or app."
+            confirmLabel="OK"
+            confirmVariant="primary"
+          />
         </>
       )}
     </div>

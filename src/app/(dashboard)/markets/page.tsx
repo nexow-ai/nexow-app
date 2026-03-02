@@ -38,7 +38,7 @@ const PAGE_SIZE = 300;
 // Use Saxo API AssetType values so requests succeed; backend also maps some legacy values.
 const SAXO_ASSET_TYPES = [
   { value: "", label: "All" },
-  { value: "_crypto", label: "Crypto", keywords: "BTC" },
+  { value: "_crypto", label: "Crypto", keywords: "BTC, ETH, LTC" },
   { value: "FxSpot", label: "Forex" },
   { value: "Stock", label: "Stocks" },
   { value: "CfdOnStock", label: "CFD Stocks" },
@@ -82,12 +82,20 @@ function buildInstrumentsUrl(params: {
   return `/api/saxo/instruments?${sp.toString()}`;
 }
 
-function Row({ label, value }: { label: string; value?: string | number | null }) {
+function Row({
+  label,
+  value,
+}: {
+  label: string;
+  value?: string | number | null;
+}) {
   if (value == null || value === "") return null;
   return (
     <div className="flex items-center justify-between gap-2">
       <dt className="text-zinc-500">{label}</dt>
-      <dd className="font-medium tabular-nums text-zinc-200">{String(value)}</dd>
+      <dd className="font-medium tabular-nums text-zinc-200">
+        {String(value)}
+      </dd>
     </div>
   );
 }
@@ -115,7 +123,13 @@ function ExpandedInstrumentContent({
   const [chartLoading, setChartLoading] = useState(true);
   const [chartError, setChartError] = useState<string | null>(null);
   const [details, setDetails] = useState<Record<string, unknown> | null>(null);
-  const [quote, setQuote] = useState<{ bid?: number; ask?: number; mid?: number; marketState?: string; lastUpdated?: string } | null>(null);
+  const [quote, setQuote] = useState<{
+    bid?: number;
+    ask?: number;
+    mid?: number;
+    marketState?: string;
+    lastUpdated?: string;
+  } | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(true);
 
   useEffect(() => {
@@ -125,8 +139,12 @@ function ExpandedInstrumentContent({
     setDetails(null);
     setQuote(null);
     Promise.all([
-      fetch(`/api/saxo/instrument-details?uic=${uic}&assetType=${encodeURIComponent(assetType)}`).then((r) => r.json()),
-      fetch(`/api/saxo/quote?uic=${uic}&assetType=${encodeURIComponent(assetType)}`).then((r) => r.json()),
+      fetch(
+        `/api/saxo/instrument-details?uic=${uic}&assetType=${encodeURIComponent(assetType)}`
+      ).then((r) => r.json()),
+      fetch(
+        `/api/saxo/quote?uic=${uic}&assetType=${encodeURIComponent(assetType)}`
+      ).then((r) => r.json()),
     ])
       .then(([detailsData, quoteData]) => {
         if (cancelled) return;
@@ -142,9 +160,15 @@ function ExpandedInstrumentContent({
           });
         }
       })
-      .catch(() => { if (!cancelled) setDetails(null); })
-      .finally(() => { if (!cancelled) setDetailsLoading(false); });
-    return () => { cancelled = true; };
+      .catch(() => {
+        if (!cancelled) setDetails(null);
+      })
+      .finally(() => {
+        if (!cancelled) setDetailsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [uic, assetType]);
 
   useEffect(() => {
@@ -163,7 +187,8 @@ function ExpandedInstrumentContent({
           `/api/saxo/charts?uic=${uic}&assetType=${encodeURIComponent(assetType)}&horizon=60&count=100`
         );
         const data = await r.json();
-        if (!r.ok) throw new Error(data.error ?? data.detail ?? "Failed to load chart");
+        if (!r.ok)
+          throw new Error(data.error ?? data.detail ?? "Failed to load chart");
         const raw = (data.data || data.Data || []) as Array<{
           Time?: string;
           CloseBid?: number;
@@ -235,14 +260,18 @@ function ExpandedInstrumentContent({
 
         const ro = new ResizeObserver(() => {
           if (container && chartInstanceRef.current) {
-            chartInstanceRef.current.applyOptions({ width: container.clientWidth });
+            chartInstanceRef.current.applyOptions({
+              width: container.clientWidth,
+            });
           }
         });
         ro.observe(container);
         resizeCleanup = () => ro.disconnect();
       } catch (e) {
         if (!cancelledRef.current) {
-          setChartError(e instanceof Error ? e.message : "Failed to load chart");
+          setChartError(
+            e instanceof Error ? e.message : "Failed to load chart"
+          );
         }
       } finally {
         if (!cancelledRef.current) setChartLoading(false);
@@ -265,7 +294,11 @@ function ExpandedInstrumentContent({
     <div className="relative border-t border-zinc-800/50 bg-zinc-900/30">
       <div className="flex items-center justify-between px-4 py-2">
         <span className="text-sm font-medium text-zinc-300">{name}</span>
-        <button type="button" onClick={onClose} className="text-xs text-zinc-500 hover:text-zinc-300">
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-xs text-zinc-500 hover:text-zinc-300"
+        >
           Close
         </button>
       </div>
@@ -278,7 +311,9 @@ function ExpandedInstrumentContent({
             </div>
           )}
           {chartError && !chartLoading && (
-            <p className="py-4 text-center text-sm text-red-400">{chartError}</p>
+            <p className="py-4 text-center text-sm text-red-400">
+              {chartError}
+            </p>
           )}
         </div>
         <div className="h-[320px] w-80 shrink-0 overflow-hidden rounded-xl border border-zinc-700/60 bg-gradient-to-b from-zinc-800/80 to-zinc-900/90 shadow-lg">
@@ -299,9 +334,25 @@ function ExpandedInstrumentContent({
                     <Row label="Uic" value={uic} />
                     {details && (
                       <>
-                        <Row label="Currency" value={(details as { CurrencyCode?: string }).CurrencyCode} />
-                        <Row label="Contract size" value={(details as { ContractSize?: number }).ContractSize} />
-                        <Row label="Decimals" value={(details as { AmountDecimals?: number }).AmountDecimals} />
+                        <Row
+                          label="Currency"
+                          value={
+                            (details as { CurrencyCode?: string }).CurrencyCode
+                          }
+                        />
+                        <Row
+                          label="Contract size"
+                          value={
+                            (details as { ContractSize?: number }).ContractSize
+                          }
+                        />
+                        <Row
+                          label="Decimals"
+                          value={
+                            (details as { AmountDecimals?: number })
+                              .AmountDecimals
+                          }
+                        />
                       </>
                     )}
                   </dl>
@@ -313,14 +364,23 @@ function ExpandedInstrumentContent({
                       Quote
                     </div>
                     <dl className="space-y-2 rounded-lg bg-zinc-800/40 px-3 py-2.5">
-                      {quote.bid != null && <Row label="Bid" value={quote.bid} />}
-                      {quote.ask != null && <Row label="Ask" value={quote.ask} />}
-                      {quote.mid != null && <Row label="Mid" value={quote.mid} />}
+                      {quote.bid != null && (
+                        <Row label="Bid" value={quote.bid} />
+                      )}
+                      {quote.ask != null && (
+                        <Row label="Ask" value={quote.ask} />
+                      )}
+                      {quote.mid != null && (
+                        <Row label="Mid" value={quote.mid} />
+                      )}
                       {quote.marketState && (
                         <div className="flex items-center justify-between gap-2">
                           <dt className="text-zinc-500">Status</dt>
                           <dd>
-                            <Badge variant="default" className="text-[10px] capitalize">
+                            <Badge
+                              variant="default"
+                              className="text-[10px] capitalize"
+                            >
                               {quote.marketState}
                             </Badge>
                           </dd>
@@ -359,7 +419,8 @@ export default function MarketsPage() {
     name: string;
   } | null>(null);
 
-  const effectiveAssetType = assetType === "_crypto" ? undefined : assetType || undefined;
+  const effectiveAssetType =
+    assetType === "_crypto" ? undefined : assetType || undefined;
   const effectiveKeywords = assetType === "_crypto" ? "BTC" : keywords;
 
   const fetchInstruments = useCallback(
@@ -376,7 +437,9 @@ export default function MarketsPage() {
         const res = await fetch(url, { cache: "no-store" });
         const data = await res.json();
         if (!res.ok) {
-          throw new Error(data.error ?? data.detail ?? "Failed to load instruments");
+          throw new Error(
+            data.error ?? data.detail ?? "Failed to load instruments"
+          );
         }
         const list = Array.isArray(data.instruments) ? data.instruments : [];
         setInstruments((prev) => (append ? [...prev, ...list] : list));
@@ -427,7 +490,9 @@ export default function MarketsPage() {
             Markets
           </h1>
           <p className="mt-1 text-sm text-zinc-500">
-            Saxo Bank instruments — browse by asset class or search. Crypto (BTC, ETH, LTC) is under Forex; use the Crypto filter or search for BTC, ETH, LTC.
+            Saxo Bank instruments — browse by asset class or search. Crypto
+            (BTC, ETH, LTC) is under Forex; use the Crypto filter or search for
+            BTC, ETH, LTC.
           </p>
         </div>
         <Link
@@ -517,9 +582,13 @@ export default function MarketsPage() {
             <>
               <div className="border-b border-zinc-800/60 px-4 py-2 text-xs text-zinc-500">
                 Showing {displayCount} instruments
-                {assetType && ` · ${SAXO_ASSET_TYPES.find((a) => a.value === assetType)?.label ?? assetType}`}
-                {keywords && assetType !== "_crypto" && ` · Search: "${keywords}"`}
-                {assetType === "_crypto" && " · Crypto (BTC pairs; search ETH or LTC for more)"}
+                {assetType &&
+                  ` · ${SAXO_ASSET_TYPES.find((a) => a.value === assetType)?.label ?? assetType}`}
+                {keywords &&
+                  assetType !== "_crypto" &&
+                  ` · Search: "${keywords}"`}
+                {assetType === "_crypto" &&
+                  " · Crypto (BTC pairs; search ETH or LTC for more)"}
               </div>
               <Table>
                 <TableHeader>
@@ -535,14 +604,18 @@ export default function MarketsPage() {
                   {instruments.map((inst, idx) => {
                     const rawUic = inst.Identifier ?? inst.Uic;
                     const uicNum =
-                      typeof rawUic === "number" ? rawUic : Number(rawUic) || idx;
+                      typeof rawUic === "number"
+                        ? rawUic
+                        : Number(rawUic) || idx;
                     const uic = rawUic ?? idx;
                     const symbol = inst.Symbol ?? inst.Identifier ?? "—";
                     const desc = inst.Description ?? "—";
                     const type = inst.AssetType ?? "FxSpot";
                     const exchange = inst.ExchangeId ?? "—";
                     const rowKey = `${uic}-${type}-${idx}`;
-                    const isExpanded = expandedInstrument?.uic === uicNum && expandedInstrument?.assetType === type;
+                    const isExpanded =
+                      expandedInstrument?.uic === uicNum &&
+                      expandedInstrument?.assetType === type;
 
                     return (
                       <Fragment key={rowKey}>
@@ -552,7 +625,11 @@ export default function MarketsPage() {
                             setExpandedInstrument(
                               isExpanded
                                 ? null
-                                : { uic: uicNum, assetType: type, name: `${symbol} — ${desc}` }
+                                : {
+                                    uic: uicNum,
+                                    assetType: type,
+                                    name: `${symbol} — ${desc}`,
+                                  }
                             )
                           }
                         >
@@ -577,7 +654,9 @@ export default function MarketsPage() {
                               {type}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-zinc-500">{exchange}</TableCell>
+                          <TableCell className="text-zinc-500">
+                            {exchange}
+                          </TableCell>
                         </TableRow>
                         {isExpanded && expandedInstrument && (
                           <TableRow className="hover:bg-transparent">
