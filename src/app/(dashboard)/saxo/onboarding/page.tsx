@@ -230,10 +230,12 @@ export default function SaxoOnboardingPage() {
           Back to Saxo Dashboard
         </Link>
         <h1 className="mt-4 text-2xl font-bold tracking-tight text-white">
-          Saxo onboarding
+          Onboard new client (IB)
         </h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Complete client signup, upload documents, and submit the application.
+          This is for <strong>Introducing Brokers</strong>: onboard a new client
+          (another person), not to create an extra account for yourself. Your
+          own additional accounts are opened in Saxo&apos;s platform or app.
         </p>
       </div>
 

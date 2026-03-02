@@ -52,6 +52,8 @@ export default function SaxoPage() {
   const [editDisplayName, setEditDisplayName] = useState("");
   const [editSaving, setEditSaving] = useState(false);
   const [deleteAccount, setDeleteAccount] = useState<Account | null>(null);
+  const [creatingAccount, setCreatingAccount] = useState(false);
+  const [createAccountError, setCreateAccountError] = useState<string | null>(null);
 
   const saxoOk = searchParams.get("saxo") === "ok";
   const isConnected = !!user;
@@ -156,6 +158,32 @@ export default function SaxoPage() {
     setEditAccount(acc);
     setEditDisplayName(String(acc.DisplayName ?? acc.AccountKey ?? ""));
   };
+
+  const handleCreateAccount = useCallback(async () => {
+    setCreatingAccount(true);
+    setCreateAccountError(null);
+    try {
+      const res = await fetch("/api/saxo/accounts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCreateAccountError(
+          typeof data.detail === "string"
+            ? data.detail
+            : data.detail?.message ?? data.error ?? "Failed to create account"
+        );
+        return;
+      }
+      await fetchDashboard();
+    } catch (e) {
+      setCreateAccountError("Failed to create account");
+    } finally {
+      setCreatingAccount(false);
+    }
+  }, [fetchDashboard]);
 
   const saveEdit = useCallback(async () => {
     if (!editAccount?.AccountKey) return;
@@ -351,20 +379,75 @@ export default function SaxoPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="flex items-center gap-2">
                 <Wallet className="h-5 w-5 text-emerald-400" />
-                Accounts
+                Your accounts
               </CardTitle>
-              <Link href="/saxo/onboarding">
-                <Button variant="secondary" size="sm">
-                  <Plus className="h-4 w-4" />
-                  Create account
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={creatingAccount}
+                  onClick={handleCreateAccount}
+                >
+                  {creatingAccount ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
+                  Create account (for me)
                 </Button>
-              </Link>
+                <Link href="/saxo/onboarding">
+                  <Button variant="outline" size="sm">
+                    Onboard new client (IB)
+                  </Button>
+                </Link>
+              </div>
             </div>
             <CardContent className="mt-4">
+              <p className="mb-4 text-xs text-zinc-500">
+                One Saxo login can have <strong>multiple accounts</strong>. To
+                have <strong>each agent trade its own account</strong>, use one
+                account per agent and assign that account&apos;s key in config.
+              </p>
+              {createAccountError &&
+              createAccountError.includes("404") &&
+              createAccountError.includes("not available") ? (
+                <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                  <p className="font-medium">Create-account API not available</p>
+                  <p className="mt-1 text-amber-200/90">
+                    Open additional accounts at{" "}
+                    <a
+                      href="https://www.saxobank.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-amber-400 underline hover:text-amber-300"
+                    >
+                      saxobank.com
+                    </a>{" "}
+                    or in the Saxo app; they will appear here once linked.
+                  </p>
+                </div>
+              ) : createAccountError ? (
+                <p className="mb-4 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">
+                  {createAccountError}
+                </p>
+              ) : null}
+              <p className="mb-4 text-xs text-zinc-500">
+                Can&apos;t create via API? Open accounts at{" "}
+                <a
+                  href="https://www.saxobank.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-emerald-400 hover:underline"
+                >
+                  saxobank.com
+                </a>{" "}
+                or the Saxo app.
+              </p>
               {accounts.length === 0 ? (
                 <p className="py-6 text-sm text-zinc-500">
-                  No accounts. Create one via onboarding to add a new client and
-                  account.
+                  No accounts yet. Use &quot;Create account (for me)&quot; to
+                  add one, or open accounts in Saxo&apos;s platform. As an IB,
+                  use &quot;Onboard new client&quot; to add another person.
                 </p>
               ) : (
                 <Table>

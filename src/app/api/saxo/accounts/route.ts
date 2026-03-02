@@ -31,3 +31,35 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export async function POST(request: NextRequest) {
+  let body: Record<string, unknown> = {};
+  try {
+    if (request.headers.get("content-type")?.includes("application/json")) {
+      body = await request.json();
+    }
+  } catch {
+    // leave body as {}
+  }
+  try {
+    const res = await fetch(`${NEXOW_API_URL}/saxo/accounts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      return NextResponse.json(
+        { error: data.detail ?? "Failed to create account" },
+        { status: res.status }
+      );
+    }
+    return NextResponse.json(data);
+  } catch (e) {
+    console.error("Saxo create account error:", e);
+    return NextResponse.json(
+      { error: "Could not reach Nexow API" },
+      { status: 502 }
+    );
+  }
+}
