@@ -1,5 +1,7 @@
+import { DashboardContent } from "@/components/layout/dashboard-content";
 import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/layout/sidebar";
+import { SidebarProvider } from "@/components/layout/sidebar-context";
 
 export default function DashboardLayout({
   children,
@@ -7,12 +9,14 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen">
-      <Sidebar />
-      <div className="flex flex-1 flex-col pl-64">
-        <Header />
-        <main className="flex-1 p-8 mesh-gradient">{children}</main>
+    <SidebarProvider>
+      <div className="flex min-h-screen">
+        <Sidebar />
+        <DashboardContent className="flex flex-1 flex-col">
+          <Header />
+          <main className="flex-1 p-8 mesh-gradient">{children}</main>
+        </DashboardContent>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }
