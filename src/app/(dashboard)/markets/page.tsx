@@ -33,53 +33,32 @@ import {
   type Time,
 } from "lightweight-charts";
 
-const PAGE_SIZE = 300;
+const PAGE_SIZE = 500;
 
-// Use Saxo API AssetType values so requests succeed; backend also maps some legacy values.
-const SAXO_ASSET_TYPES = [
-  { value: "", label: "All" },
-  { value: "_crypto", label: "Crypto", keywords: "BTC, ETH, LTC" },
-  { value: "FxSpot", label: "Forex" },
-  { value: "Stock", label: "Stocks" },
-  { value: "CfdOnStock", label: "CFD Stocks" },
-  { value: "CfdOnIndex", label: "CFD Indices" },
-  { value: "CfdOnFutures", label: "CFD Futures" },
-  { value: "ContractFutures", label: "Futures" },
-  { value: "FxForwards", label: "Forwards" },
-  { value: "CfdOnEtf", label: "CFD ETF" },
-  { value: "CfdOnFund", label: "CFD Fund" },
-  { value: "Option", label: "Options" },
-  { value: "Bond", label: "Bonds" },
-  { value: "Fund", label: "Funds" },
-  { value: "Etf", label: "ETF" },
-  { value: "Etc", label: "ETC" },
-  { value: "Etn", label: "ETN" },
-  { value: "Rights", label: "Rights" },
-  { value: "Warrant", label: "Warrants" },
-] as const;
-
-interface SaxoInstrument {
-  Uic?: number;
-  AssetType?: string;
-  Symbol?: string;
-  Description?: string;
-  ExchangeId?: string;
-  Identifier?: string;
+interface AlpacaAsset {
+  id?: string;
+  class?: string;
+  exchange?: string;
+  symbol: string;
+  name: string;
+  status?: string;
+  tradable?: boolean;
+  marginable?: boolean;
+  shortable?: boolean;
+  fractionable?: boolean;
   [key: string]: unknown;
 }
 
-function buildInstrumentsUrl(params: {
-  assetTypes?: string;
-  keywords?: string;
-  top: number;
-  skip: number;
+function buildAssetsUrl(params: {
+  search?: string;
+  limit?: number;
 }): string {
   const sp = new URLSearchParams();
-  sp.set("top", String(params.top));
-  sp.set("skip", String(params.skip));
-  if (params.assetTypes) sp.set("assetTypes", params.assetTypes);
-  if (params.keywords?.trim()) sp.set("keywords", params.keywords.trim());
-  return `/api/saxo/instruments?${sp.toString()}`;
+  sp.set("status", "active");
+  sp.set("asset_class", "us_equity");
+  if (params.search?.trim()) sp.set("search", params.search.trim());
+  sp.set("limit", String(params.limit ?? PAGE_SIZE));
+  return `/api/alpaca/assets?${sp.toString()}`;
 }
 
 function Row({
@@ -100,20 +79,16 @@ function Row({
   );
 }
 
-type BidAskPoint = { time: number; bid: number; ask: number };
-
-function saxoTimestamp(s: string): number {
+function barTimestamp(s: string): number {
   return Math.floor(new Date(s).getTime() / 1000);
 }
 
 function ExpandedInstrumentContent({
-  uic,
-  assetType,
+  symbol,
   name,
   onClose,
 }: {
-  uic: number;
-  assetType: string;
+  symbol: string;
   name: string;
   onClose: () => void;
 }) {
@@ -122,43 +97,37 @@ function ExpandedInstrumentContent({
   const cancelledRef = useRef(false);
   const [chartLoading, setChartLoading] = useState(true);
   const [chartError, setChartError] = useState<string | null>(null);
-  const [details, setDetails] = useState<Record<string, unknown> | null>(null);
+  const [details, setDetails] = useState<AlpacaAsset | null>(null);
   const [quote, setQuote] = useState<{
-    bid?: number;
-    ask?: number;
-    mid?: number;
-    marketState?: string;
-    lastUpdated?: string;
+    bid?: number | null;
+    ask?: number | null;
+    timestamp?: string | null;
   } | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(true);
 
   useEffect(() => {
-    if (!uic || !assetType) return;
+    if (!symbol) return;
     let cancelled = false;
     setDetailsLoading(true);
     setDetails(null);
     setQuote(null);
     Promise.all([
-      fetch(
-        `/api/saxo/instrument-details?uic=${uic}&assetType=${encodeURIComponent(assetType)}`
-      ).then((r) => r.json()),
-      fetch(
-        `/api/saxo/quote?uic=${uic}&assetType=${encodeURIComponent(assetType)}`
-      ).then((r) => r.json()),
+      fetch(`/api/alpaca/assets/${encodeURIComponent(symbol)}`).then((r) =>
+        r.json()
+      ),
+      fetch(`/api/alpaca/quote?symbol=${encodeURIComponent(symbol)}`).then((r) =>
+        r.json()
+      ),
     ])
       .then(([detailsData, quoteData]) => {
         if (cancelled) return;
         if (detailsData && !detailsData.error) setDetails(detailsData);
-        if (quoteData?.Quote) {
-          const q = quoteData.Quote;
+        if (quoteData && !quoteData.error)
           setQuote({
-            bid: q.Bid,
-            ask: q.Ask,
-            mid: q.Mid,
-            marketState: quoteData.MarketState ?? quoteData.PriceSource,
-            lastUpdated: quoteData.LastUpdated,
+            bid: quoteData.bid,
+            ask: quoteData.ask,
+            timestamp: quoteData.timestamp,
           });
-        }
       })
       .catch(() => {
         if (!cancelled) setDetails(null);
@@ -169,39 +138,44 @@ function ExpandedInstrumentContent({
     return () => {
       cancelled = true;
     };
-  }, [uic, assetType]);
+  }, [symbol]);
 
   useEffect(() => {
     const container = chartContainerRef.current;
-    if (!container || !uic || !assetType) return;
+    if (!container || !symbol) return;
 
     cancelledRef.current = false;
     chartInstanceRef.current = null;
     let resizeCleanup: (() => void) | null = null;
+
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - 5);
+    const startStr = start.toISOString().split("T")[0];
+    const endStr = end.toISOString().split("T")[0];
 
     const load = async () => {
       setChartLoading(true);
       setChartError(null);
       try {
         const r = await fetch(
-          `/api/saxo/charts?uic=${uic}&assetType=${encodeURIComponent(assetType)}&horizon=60&count=100`
+          `/api/alpaca/bars?symbol=${encodeURIComponent(symbol)}&timeframe=1Hour&start=${startStr}&end=${endStr}&limit=100`
         );
         const data = await r.json();
         if (!r.ok)
           throw new Error(data.error ?? data.detail ?? "Failed to load chart");
-        const raw = (data.data || data.Data || []) as Array<{
-          Time?: string;
-          CloseBid?: number;
-          CloseAsk?: number;
+        const bars = (data.bars ?? []) as Array<{
+          t?: string;
+          c?: number;
+          o?: number;
         }>;
-        const points: BidAskPoint[] = raw
-          .filter((p) => p.Time && (p.CloseBid != null || p.CloseAsk != null))
+        const points = bars
+          .filter((p) => p.t && (p.c != null || p.o != null))
           .map((p) => ({
-            time: saxoTimestamp(p.Time!),
-            bid: p.CloseBid ?? p.CloseAsk ?? 0,
-            ask: p.CloseAsk ?? p.CloseBid ?? 0,
+            time: barTimestamp(p.t!),
+            value: p.c ?? p.o ?? 0,
           }))
-          .filter((p) => p.bid > 0 || p.ask > 0)
+          .filter((p) => p.value > 0)
           .sort((a, b) => a.time - b.time);
 
         if (points.length === 0) {
@@ -238,22 +212,13 @@ function ExpandedInstrumentContent({
 
         chartInstanceRef.current = chart;
 
-        const bidSeries = chart.addSeries(LineSeries, {
+        const series = chart.addSeries(LineSeries, {
           color: "#10b981",
           lineWidth: 2,
-          title: "Bid",
+          title: "Close",
         });
-        bidSeries.setData(
-          points.map((p) => ({ time: p.time as Time, value: p.bid }))
-        );
-
-        const askSeries = chart.addSeries(LineSeries, {
-          color: "#f59e0b",
-          lineWidth: 2,
-          title: "Ask",
-        });
-        askSeries.setData(
-          points.map((p) => ({ time: p.time as Time, value: p.ask }))
+        series.setData(
+          points.map((p) => ({ time: p.time as Time, value: p.value }))
         );
 
         chart.timeScale().fitContent();
@@ -288,7 +253,7 @@ function ExpandedInstrumentContent({
       }
       container.innerHTML = "";
     };
-  }, [uic, assetType]);
+  }, [symbol]);
 
   return (
     <div className="relative border-t border-zinc-800/50 bg-zinc-900/30">
@@ -327,34 +292,14 @@ function ExpandedInstrumentContent({
                 <section>
                   <div className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-zinc-500">
                     <Package className="h-3.5 w-3.5" />
-                    Instrument
+                    Asset
                   </div>
                   <dl className="space-y-2 rounded-lg bg-zinc-800/40 px-3 py-2.5">
-                    <Row label="Type" value={assetType} />
-                    <Row label="Uic" value={uic} />
-                    {details && (
-                      <>
-                        <Row
-                          label="Currency"
-                          value={
-                            (details as { CurrencyCode?: string }).CurrencyCode
-                          }
-                        />
-                        <Row
-                          label="Contract size"
-                          value={
-                            (details as { ContractSize?: number }).ContractSize
-                          }
-                        />
-                        <Row
-                          label="Decimals"
-                          value={
-                            (details as { AmountDecimals?: number })
-                              .AmountDecimals
-                          }
-                        />
-                      </>
-                    )}
+                    <Row label="Symbol" value={details?.symbol} />
+                    <Row label="Exchange" value={details?.exchange} />
+                    <Row label="Class" value={details?.class} />
+                    <Row label="Tradable" value={details?.tradable ? "Yes" : "No"} />
+                    <Row label="Fractionable" value={details?.fractionable ? "Yes" : "No"} />
                   </dl>
                 </section>
                 {quote && (
@@ -370,26 +315,10 @@ function ExpandedInstrumentContent({
                       {quote.ask != null && (
                         <Row label="Ask" value={quote.ask} />
                       )}
-                      {quote.mid != null && (
-                        <Row label="Mid" value={quote.mid} />
-                      )}
-                      {quote.marketState && (
-                        <div className="flex items-center justify-between gap-2">
-                          <dt className="text-zinc-500">Status</dt>
-                          <dd>
-                            <Badge
-                              variant="default"
-                              className="text-[10px] capitalize"
-                            >
-                              {quote.marketState}
-                            </Badge>
-                          </dd>
-                        </div>
-                      )}
-                      {quote.lastUpdated && (
+                      {quote.timestamp && (
                         <div className="flex items-center gap-1 pt-1.5 text-[10px] text-zinc-500">
                           <Clock className="h-3 w-3 shrink-0" />
-                          {quote.lastUpdated}
+                          {quote.timestamp}
                         </div>
                       )}
                     </dl>
@@ -405,82 +334,56 @@ function ExpandedInstrumentContent({
 }
 
 export default function MarketsPage() {
-  const [assetType, setAssetType] = useState("");
   const [keywords, setKeywords] = useState("");
   const [searchInput, setSearchInput] = useState("");
-  const [instruments, setInstruments] = useState<SaxoInstrument[]>([]);
+  const [assets, setAssets] = useState<AlpacaAsset[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [skip, setSkip] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
-  const [expandedInstrument, setExpandedInstrument] = useState<{
-    uic: number;
-    assetType: string;
+  const [expandedAsset, setExpandedAsset] = useState<{
+    symbol: string;
     name: string;
   } | null>(null);
 
-  const effectiveAssetType =
-    assetType === "_crypto" ? undefined : assetType || undefined;
-  const effectiveKeywords = assetType === "_crypto" ? "BTC" : keywords;
-
-  const fetchInstruments = useCallback(
-    async (nextSkip: number, append: boolean) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const url = buildInstrumentsUrl({
-          assetTypes: effectiveAssetType,
-          keywords: effectiveKeywords || undefined,
-          top: PAGE_SIZE,
-          skip: nextSkip,
-        });
-        const res = await fetch(url, { cache: "no-store" });
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(
-            data.error ?? data.detail ?? "Failed to load instruments"
-          );
-        }
-        const list = Array.isArray(data.instruments) ? data.instruments : [];
-        setInstruments((prev) => (append ? [...prev, ...list] : list));
-        setHasMore(list.length === PAGE_SIZE);
-        setSkip(nextSkip);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load instruments");
-        if (!append) setInstruments([]);
-      } finally {
-        setLoading(false);
+  const fetchAssets = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const url = buildAssetsUrl({
+        search: keywords || undefined,
+        limit: PAGE_SIZE,
+      });
+      const res = await fetch(url, { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(
+          data.error ?? data.detail ?? "Failed to load assets"
+        );
       }
-    },
-    [effectiveAssetType, effectiveKeywords]
-  );
+      setAssets(Array.isArray(data) ? data : []);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load assets");
+      setAssets([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [keywords]);
 
   useEffect(() => {
-    fetchInstruments(0, false);
-  }, [assetType, keywords, fetchInstruments]);
+    fetchAssets();
+  }, [fetchAssets]);
 
   const handleSearch = () => {
     setKeywords(searchInput);
-    setSkip(0);
-  };
-
-  const loadMore = () => {
-    fetchInstruments(skip + PAGE_SIZE, true);
   };
 
   const reset = () => {
-    setAssetType("");
     setKeywords("");
     setSearchInput("");
-    setSkip(0);
-    setExpandedInstrument(null);
-    fetchInstruments(0, false);
+    setExpandedAsset(null);
+    fetchAssets();
   };
 
-  const displayCount =
-    instruments.length + (hasMore ? 1 : 0) > PAGE_SIZE
-      ? `${instruments.length}+`
-      : String(instruments.length);
+  const displayCount = assets.length;
 
   return (
     <div className="space-y-6">
@@ -490,17 +393,16 @@ export default function MarketsPage() {
             Markets
           </h1>
           <p className="mt-1 text-sm text-zinc-500">
-            Saxo Bank instruments — browse by asset class or search. Crypto
-            (BTC, ETH, LTC) is under Forex; use the Crypto filter or search for
-            BTC, ETH, LTC.
+            US equities via Alpaca — search by symbol or company name. Connect a
+            trading account in Trading to place orders.
           </p>
         </div>
         <Link
-          href="/saxo"
+          href="/trading"
           className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-700/60 hover:text-white"
         >
           <Building2 className="h-4 w-4" />
-          Saxo Connect
+          Trading
         </Link>
       </div>
 
@@ -511,26 +413,9 @@ export default function MarketsPage() {
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        {SAXO_ASSET_TYPES.map(({ value, label }) => (
-          <button
-            key={value || "all"}
-            onClick={() => {
-              setAssetType(value);
-              setSearchInput("");
-              setKeywords("");
-            }}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-              assetType === value
-                ? "bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30"
-                : "bg-zinc-800/60 text-zinc-400 hover:bg-zinc-700/60 hover:text-zinc-200"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex flex-1 items-center gap-2">
           <Input
-            placeholder="Search (e.g. EUR, Apple, Gold)"
+            placeholder="Search (e.g. AAPL, Apple)"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -564,72 +449,54 @@ export default function MarketsPage() {
 
       <Card>
         <CardContent className="p-0">
-          {loading && instruments.length === 0 ? (
-            <div className="flex items-center justify-center py-16">
+          {loading && assets.length === 0 ? (
+            <div className="flex justify-center py-16">
               <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
             </div>
-          ) : instruments.length === 0 ? (
+          ) : assets.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <BarChart3 className="h-12 w-12 text-zinc-600" />
               <p className="mt-3 text-sm text-zinc-500">
-                Select an asset class above or search to view Saxo instruments
+                Search for a symbol or company name to view US equities
               </p>
               <p className="mt-1 text-xs text-zinc-600">
-                Make sure Saxo is connected (Saxo Connect in the sidebar).
+                Alpaca API keys must be configured for market data.
               </p>
             </div>
           ) : (
             <>
               <div className="border-b border-zinc-800/60 px-4 py-2 text-xs text-zinc-500">
-                Showing {displayCount} instruments
-                {assetType &&
-                  ` · ${SAXO_ASSET_TYPES.find((a) => a.value === assetType)?.label ?? assetType}`}
-                {keywords &&
-                  assetType !== "_crypto" &&
-                  ` · Search: "${keywords}"`}
-                {assetType === "_crypto" &&
-                  " · Crypto (BTC pairs; search ETH or LTC for more)"}
+                Showing {displayCount} assets
+                {keywords && ` · Search: "${keywords}"`}
               </div>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-10" />
                     <TableHead>Symbol</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Asset type</TableHead>
+                    <TableHead>Name</TableHead>
                     <TableHead>Exchange</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {instruments.map((inst, idx) => {
-                    const rawUic = inst.Identifier ?? inst.Uic;
-                    const uicNum =
-                      typeof rawUic === "number"
-                        ? rawUic
-                        : Number(rawUic) || idx;
-                    const uic = rawUic ?? idx;
-                    const symbol = inst.Symbol ?? inst.Identifier ?? "—";
-                    const desc = inst.Description ?? "—";
-                    const type = inst.AssetType ?? "FxSpot";
-                    const exchange = inst.ExchangeId ?? "—";
-                    const rowKey = `${uic}-${type}-${idx}`;
+                  {assets.map((asset, idx) => {
+                    const symbol = asset.symbol ?? "—";
+                    const name = asset.name ?? "—";
+                    const exchange = asset.exchange ?? "—";
+                    const status = asset.status ?? "—";
                     const isExpanded =
-                      expandedInstrument?.uic === uicNum &&
-                      expandedInstrument?.assetType === type;
+                      expandedAsset?.symbol === symbol;
 
                     return (
-                      <Fragment key={rowKey}>
+                      <Fragment key={asset.id ?? `${symbol}-${idx}`}>
                         <TableRow
                           className="cursor-pointer hover:bg-zinc-800/40"
                           onClick={() =>
-                            setExpandedInstrument(
+                            setExpandedAsset(
                               isExpanded
                                 ? null
-                                : {
-                                    uic: uicNum,
-                                    assetType: type,
-                                    name: `${symbol} — ${desc}`,
-                                  }
+                                : { symbol, name: `${symbol} — ${name}` }
                             )
                           }
                         >
@@ -644,28 +511,27 @@ export default function MarketsPage() {
                             {symbol}
                           </TableCell>
                           <TableCell className="max-w-md truncate font-medium text-white">
-                            {desc}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="default"
-                              className="text-[10px] font-medium text-zinc-400"
-                            >
-                              {type}
-                            </Badge>
+                            {name}
                           </TableCell>
                           <TableCell className="text-zinc-500">
                             {exchange}
                           </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="default"
+                              className="text-[10px] font-medium text-zinc-400 capitalize"
+                            >
+                              {status}
+                            </Badge>
+                          </TableCell>
                         </TableRow>
-                        {isExpanded && expandedInstrument && (
+                        {isExpanded && expandedAsset && (
                           <TableRow className="hover:bg-transparent">
                             <TableCell colSpan={5} className="p-0">
                               <ExpandedInstrumentContent
-                                uic={expandedInstrument.uic}
-                                assetType={expandedInstrument.assetType}
-                                name={expandedInstrument.name}
-                                onClose={() => setExpandedInstrument(null)}
+                                symbol={expandedAsset.symbol}
+                                name={expandedAsset.name}
+                                onClose={() => setExpandedAsset(null)}
                               />
                             </TableCell>
                           </TableRow>
@@ -675,22 +541,6 @@ export default function MarketsPage() {
                   })}
                 </TableBody>
               </Table>
-              {hasMore && (
-                <div className="flex justify-center border-t border-zinc-800/60 py-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={loadMore}
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : null}
-                    Load more
-                  </Button>
-                </div>
-              )}
             </>
           )}
         </CardContent>

@@ -28,7 +28,7 @@ const navigation = [
   { name: "Strategy Labs", href: "/labs", icon: FlaskConical },
   { name: "My Bots", href: "/bots", icon: Zap },
   { name: "My Agents", href: "/agents", icon: Brain },
-  { name: "Saxo Connect", href: "/saxo", icon: Building2 },
+  { name: "Trading", href: "/trading", icon: Building2 },
   { name: "Wall of Fame", href: "/leaderboard", icon: Trophy },
   { name: "Copy Trading", href: "/copy", icon: Copy },
   { name: "Pricing", href: "/pricing", icon: Sparkles },
