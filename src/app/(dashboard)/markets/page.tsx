@@ -33,7 +33,22 @@ import {
   type Time,
 } from "lightweight-charts";
 
-const PAGE_SIZE = 500;
+const PAGE_SIZE = 1000;
+
+const ASSET_CLASSES = [
+  { value: "", label: "All", description: "All asset classes" },
+  { value: "stock", label: "Stocks", description: "US stocks" },
+  { value: "etf", label: "ETFs", description: "US ETFs" },
+  { value: "us_option", label: "Options", description: "US options" },
+  { value: "crypto", label: "Crypto", description: "Cryptocurrencies" },
+  { value: "fixed_income", label: "Fixed Income", description: "Corp bonds & T-Bills" },
+] as const;
+
+const ETF_EXCHANGES = ["NYSEARCA", "ARCA"];
+function isEtfExchange(exchange: string | undefined): boolean {
+  const ex = (exchange ?? "").toUpperCase();
+  return ETF_EXCHANGES.some((e) => ex === e);
+}
 
 interface AlpacaAsset {
   id?: string;
@@ -50,15 +65,29 @@ interface AlpacaAsset {
 }
 
 function buildAssetsUrl(params: {
+  assetClass?: string;
   search?: string;
   limit?: number;
 }): string {
   const sp = new URLSearchParams();
   sp.set("status", "active");
-  sp.set("asset_class", "us_equity");
+  if (params.assetClass) sp.set("asset_class", params.assetClass);
   if (params.search?.trim()) sp.set("search", params.search.trim());
   sp.set("limit", String(params.limit ?? PAGE_SIZE));
   return `/api/alpaca/assets?${sp.toString()}`;
+}
+
+function assetClassLabel(
+  value: string,
+  asset?: { exchange?: string }
+): string {
+  const found = ASSET_CLASSES.find((c) => c.value === value);
+  if (found) return found.label;
+  if (value === "us_equity" && asset)
+    return isEtfExchange(asset.exchange) ? "ETF" : "Stock";
+  if (value === "us_equity") return "Stocks & ETFs";
+  if (value === "fixed_income") return "Fixed Income";
+  return value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function Row({
@@ -86,10 +115,12 @@ function barTimestamp(s: string): number {
 function ExpandedInstrumentContent({
   symbol,
   name,
+  assetClass,
   onClose,
 }: {
   symbol: string;
   name: string;
+  assetClass?: string;
   onClose: () => void;
 }) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -97,6 +128,7 @@ function ExpandedInstrumentContent({
   const cancelledRef = useRef(false);
   const [chartLoading, setChartLoading] = useState(true);
   const [chartError, setChartError] = useState<string | null>(null);
+  const [chartUnsupported, setChartUnsupported] = useState(false);
   const [details, setDetails] = useState<AlpacaAsset | null>(null);
   const [quote, setQuote] = useState<{
     bid?: number | null;
@@ -104,6 +136,13 @@ function ExpandedInstrumentContent({
     timestamp?: string | null;
   } | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(true);
+
+  const supportsChart =
+    !assetClass ||
+    assetClass === "us_equity" ||
+    assetClass === "stock" ||
+    assetClass === "etf" ||
+    assetClass === "crypto";
 
   useEffect(() => {
     if (!symbol) return;
@@ -141,6 +180,14 @@ function ExpandedInstrumentContent({
   }, [symbol]);
 
   useEffect(() => {
+    if (!supportsChart) {
+      setChartLoading(false);
+      setChartUnsupported(true);
+      setChartError(null);
+      return;
+    }
+    setChartUnsupported(false);
+
     const container = chartContainerRef.current;
     if (!container || !symbol) return;
 
@@ -153,14 +200,63 @@ function ExpandedInstrumentContent({
     start.setDate(start.getDate() - 5);
     const startStr = start.toISOString().split("T")[0];
     const endStr = end.toISOString().split("T")[0];
+    const isCrypto = assetClass === "crypto";
+    const barsUrl = isCrypto
+      ? `/api/alpaca/crypto-bars?symbol=${encodeURIComponent(symbol)}&timeframe=1Hour&start=${startStr}&end=${endStr}&limit=100`
+      : `/api/alpaca/bars?symbol=${encodeURIComponent(symbol)}&timeframe=1Hour&start=${startStr}&end=${endStr}&limit=100`;
+
+    const buildChart = (points: { time: number; value: number }[]): (() => void) | void => {
+      if (cancelledRef.current || points.length === 0) return;
+      const w = Math.max(container.clientWidth || 400, 400);
+      container.innerHTML = "";
+      const chart = createChart(container, {
+        layout: {
+          background: { type: ColorType.Solid, color: "transparent" },
+          textColor: "#a1a1aa",
+          fontFamily: "inherit",
+        },
+        grid: {
+          vertLines: { color: "rgba(255,255,255,0.06)" },
+          horzLines: { color: "rgba(255,255,255,0.06)" },
+        },
+        width: w,
+        height: 330,
+        timeScale: {
+          borderColor: "rgba(255,255,255,0.12)",
+          timeVisible: true,
+          secondsVisible: false,
+        },
+        rightPriceScale: {
+          borderColor: "rgba(255,255,255,0.12)",
+          scaleMargins: { top: 0.1, bottom: 0.2 },
+        },
+      });
+      chartInstanceRef.current = chart;
+      const series = chart.addSeries(LineSeries, {
+        color: "#10b981",
+        lineWidth: 2,
+        title: "Close",
+      });
+      series.setData(
+        points.map((p) => ({ time: p.time as Time, value: p.value }))
+      );
+      chart.timeScale().fitContent();
+      const ro = new ResizeObserver(() => {
+        if (container && chartInstanceRef.current && container.clientWidth > 0) {
+          chartInstanceRef.current.applyOptions({
+            width: container.clientWidth,
+          });
+        }
+      });
+      ro.observe(container);
+      return () => ro.disconnect();
+    };
 
     const load = async () => {
       setChartLoading(true);
       setChartError(null);
       try {
-        const r = await fetch(
-          `/api/alpaca/bars?symbol=${encodeURIComponent(symbol)}&timeframe=1Hour&start=${startStr}&end=${endStr}&limit=100`
-        );
+        const r = await fetch(barsUrl);
         const data = await r.json();
         if (!r.ok)
           throw new Error(data.error ?? data.detail ?? "Failed to load chart");
@@ -178,60 +274,29 @@ function ExpandedInstrumentContent({
           .filter((p) => p.value > 0)
           .sort((a, b) => a.time - b.time);
 
+        if (cancelledRef.current) return;
         if (points.length === 0) {
           setChartError("No chart data");
           setChartLoading(false);
           return;
         }
 
-        if (cancelledRef.current) return;
-
-        container.innerHTML = "";
-        const chart = createChart(container, {
-          layout: {
-            background: { type: ColorType.Solid, color: "transparent" },
-            textColor: "#a1a1aa",
-            fontFamily: "inherit",
-          },
-          grid: {
-            vertLines: { color: "rgba(255,255,255,0.06)" },
-            horzLines: { color: "rgba(255,255,255,0.06)" },
-          },
-          width: container.clientWidth,
-          height: 330,
-          timeScale: {
-            borderColor: "rgba(255,255,255,0.12)",
-            timeVisible: true,
-            secondsVisible: false,
-          },
-          rightPriceScale: {
-            borderColor: "rgba(255,255,255,0.12)",
-            scaleMargins: { top: 0.1, bottom: 0.2 },
-          },
-        });
-
-        chartInstanceRef.current = chart;
-
-        const series = chart.addSeries(LineSeries, {
-          color: "#10b981",
-          lineWidth: 2,
-          title: "Close",
-        });
-        series.setData(
-          points.map((p) => ({ time: p.time as Time, value: p.value }))
-        );
-
-        chart.timeScale().fitContent();
-
-        const ro = new ResizeObserver(() => {
-          if (container && chartInstanceRef.current) {
-            chartInstanceRef.current.applyOptions({
-              width: container.clientWidth,
-            });
-          }
-        });
-        ro.observe(container);
-        resizeCleanup = () => ro.disconnect();
+        if (container.clientWidth > 0) {
+          resizeCleanup = buildChart(points) ?? null;
+        } else {
+          const ro = new ResizeObserver(() => {
+            if (container.clientWidth > 0 && chartInstanceRef.current === null && !cancelledRef.current) {
+              resizeCleanup = buildChart(points) ?? null;
+            }
+          });
+          ro.observe(container);
+          resizeCleanup = () => ro.disconnect();
+          requestAnimationFrame(() => {
+            if (container.clientWidth > 0 && !cancelledRef.current && chartInstanceRef.current === null) {
+              resizeCleanup = buildChart(points) ?? null;
+            }
+          });
+        }
       } catch (e) {
         if (!cancelledRef.current) {
           setChartError(
@@ -243,8 +308,9 @@ function ExpandedInstrumentContent({
       }
     };
 
-    load();
+    const t = setTimeout(load, 50);
     return () => {
+      clearTimeout(t);
       cancelledRef.current = true;
       resizeCleanup?.();
       if (chartInstanceRef.current) {
@@ -253,7 +319,7 @@ function ExpandedInstrumentContent({
       }
       container.innerHTML = "";
     };
-  }, [symbol]);
+  }, [symbol, assetClass, supportsChart]);
 
   return (
     <div className="relative border-t border-zinc-800/50 bg-zinc-900/30">
@@ -268,17 +334,28 @@ function ExpandedInstrumentContent({
         </button>
       </div>
       <div className="flex gap-4 px-4 pb-4">
-        <div className="relative h-[320px] min-w-0 flex-1">
-          <div ref={chartContainerRef} className="h-full w-full rounded-lg" />
+        <div className="relative min-h-[330px] min-w-[400px] flex-1">
+          <div
+            ref={chartContainerRef}
+            className="h-[330px] w-full min-w-[400px] rounded-lg"
+            style={{ minHeight: 330 }}
+          />
           {chartLoading && (
             <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-zinc-900/70">
               <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
             </div>
           )}
-          {chartError && !chartLoading && (
+          {chartError && !chartLoading && !chartUnsupported && (
             <p className="py-4 text-center text-sm text-red-400">
               {chartError}
             </p>
+          )}
+          {chartUnsupported && (
+            <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-zinc-900/30">
+              <p className="text-sm text-zinc-500">
+                Chart not available for this asset type
+              </p>
+            </div>
           )}
         </div>
         <div className="h-[320px] w-80 shrink-0 overflow-hidden rounded-xl border border-zinc-700/60 bg-gradient-to-b from-zinc-800/80 to-zinc-900/90 shadow-lg">
@@ -334,6 +411,7 @@ function ExpandedInstrumentContent({
 }
 
 export default function MarketsPage() {
+  const [assetClass, setAssetClass] = useState<string>("");
   const [keywords, setKeywords] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [assets, setAssets] = useState<AlpacaAsset[]>([]);
@@ -349,6 +427,7 @@ export default function MarketsPage() {
     setError(null);
     try {
       const url = buildAssetsUrl({
+        assetClass: assetClass || undefined,
         search: keywords || undefined,
         limit: PAGE_SIZE,
       });
@@ -366,7 +445,7 @@ export default function MarketsPage() {
     } finally {
       setLoading(false);
     }
-  }, [keywords]);
+  }, [assetClass, keywords]);
 
   useEffect(() => {
     fetchAssets();
@@ -377,6 +456,7 @@ export default function MarketsPage() {
   };
 
   const reset = () => {
+    setAssetClass("");
     setKeywords("");
     setSearchInput("");
     setExpandedAsset(null);
@@ -393,8 +473,8 @@ export default function MarketsPage() {
             Markets
           </h1>
           <p className="mt-1 text-sm text-zinc-500">
-            US equities via Alpaca — search by symbol or company name. Connect a
-            trading account in Trading to place orders.
+            Browse stocks, ETFs, options, crypto, and fixed income via Alpaca.
+            Search by symbol or name. Connect a trading account in Trading to place orders.
           </p>
         </div>
         <Link
@@ -412,10 +492,30 @@ export default function MarketsPage() {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-1 items-center gap-2">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center gap-2">
+          {ASSET_CLASSES.map(({ value, label }) => (
+            <button
+              key={value || "all"}
+              type="button"
+              onClick={() => {
+                setAssetClass(value);
+                setSearchInput("");
+                setKeywords("");
+              }}
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                assetClass === value
+                  ? "bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30"
+                  : "bg-zinc-800/60 text-zinc-400 hover:bg-zinc-700/60 hover:text-zinc-200"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           <Input
-            placeholder="Search (e.g. AAPL, Apple)"
+            placeholder="Search (e.g. AAPL, Bitcoin)"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -457,7 +557,7 @@ export default function MarketsPage() {
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <BarChart3 className="h-12 w-12 text-zinc-600" />
               <p className="mt-3 text-sm text-zinc-500">
-                Search for a symbol or company name to view US equities
+                Select an asset class above or search to view markets
               </p>
               <p className="mt-1 text-xs text-zinc-600">
                 Alpaca API keys must be configured for market data.
@@ -467,6 +567,7 @@ export default function MarketsPage() {
             <>
               <div className="border-b border-zinc-800/60 px-4 py-2 text-xs text-zinc-500">
                 Showing {displayCount} assets
+                {assetClass && ` · ${assetClassLabel(assetClass)}`}
                 {keywords && ` · Search: "${keywords}"`}
               </div>
               <Table>
@@ -475,6 +576,7 @@ export default function MarketsPage() {
                     <TableHead className="w-10" />
                     <TableHead>Symbol</TableHead>
                     <TableHead>Name</TableHead>
+                    <TableHead>Class</TableHead>
                     <TableHead>Exchange</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
@@ -483,13 +585,14 @@ export default function MarketsPage() {
                   {assets.map((asset, idx) => {
                     const symbol = asset.symbol ?? "—";
                     const name = asset.name ?? "—";
+                    const classVal = asset.class ?? "—";
                     const exchange = asset.exchange ?? "—";
                     const status = asset.status ?? "—";
                     const isExpanded =
                       expandedAsset?.symbol === symbol;
 
                     return (
-                      <Fragment key={asset.id ?? `${symbol}-${idx}`}>
+                      <Fragment key={asset.id ?? `${symbol}-${classVal}-${idx}`}>
                         <TableRow
                           className="cursor-pointer hover:bg-zinc-800/40"
                           onClick={() =>
@@ -513,6 +616,14 @@ export default function MarketsPage() {
                           <TableCell className="max-w-md truncate font-medium text-white">
                             {name}
                           </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="info"
+                              className="text-[10px] font-medium text-zinc-400"
+                            >
+                              {assetClassLabel(classVal, asset)}
+                            </Badge>
+                          </TableCell>
                           <TableCell className="text-zinc-500">
                             {exchange}
                           </TableCell>
@@ -527,10 +638,11 @@ export default function MarketsPage() {
                         </TableRow>
                         {isExpanded && expandedAsset && (
                           <TableRow className="hover:bg-transparent">
-                            <TableCell colSpan={5} className="p-0">
+                            <TableCell colSpan={6} className="p-0">
                               <ExpandedInstrumentContent
                                 symbol={expandedAsset.symbol}
                                 name={expandedAsset.name}
+                                assetClass={classVal === "—" ? undefined : classVal}
                                 onClose={() => setExpandedAsset(null)}
                               />
                             </TableCell>
