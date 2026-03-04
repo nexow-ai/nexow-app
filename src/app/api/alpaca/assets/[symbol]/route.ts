@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { alpacaFetch, getPaperApiUrl, hasAlpacaConfig } from "@/lib/alpaca";
+import {
+  alpacaFetch,
+  getBrokerApiUrl,
+  getPaperApiUrl,
+  hasAlpacaConfig,
+  hasBrokerConfig,
+} from "@/lib/alpaca";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +27,10 @@ export async function GET(
     );
   }
 
-  const url = getPaperApiUrl(`/v2/assets/${encodeURIComponent(symbol)}`);
+  const path = hasBrokerConfig() ? "/v1/assets" : "/v2/assets";
+  const url = hasBrokerConfig()
+    ? getBrokerApiUrl(`${path}/${encodeURIComponent(symbol)}`)
+    : getPaperApiUrl(`${path}/${encodeURIComponent(symbol)}`);
   try {
     const res = await alpacaFetch(url, { cache: "no-store" });
     const data = await res.json();

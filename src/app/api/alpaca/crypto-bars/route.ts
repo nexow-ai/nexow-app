@@ -36,14 +36,15 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const cryptoSymbol = symbol.includes("/") ? symbol.trim() : `${symbol.trim()}/USD`;
   const params = new URLSearchParams();
-  params.set("symbols", symbol.trim());
+  params.set("symbols", cryptoSymbol);
   params.set("timeframe", timeframe);
   if (start) params.set("start", start);
   if (end) params.set("end", end);
   params.set("limit", limit);
 
-  const url = getDataApiUrl("/v2/stocks/bars", params.toString());
+  const url = getDataApiUrl("/v1beta3/crypto/us/bars", params.toString());
   try {
     const res = await alpacaDataFetch(url, { cache: "no-store" });
     const text = await res.text();
@@ -53,25 +54,28 @@ export async function GET(request: NextRequest) {
     }>(text);
 
     if (!data) {
-      console.error("Alpaca bars non-JSON response:", text.slice(0, 200));
+      console.error("Alpaca crypto bars non-JSON response:", text.slice(0, 200));
       return NextResponse.json(
         {
           error:
-            "Market data returned an invalid response. For charts, add ALPACA_API_KEY and ALPACA_SECRET_KEY (Paper Trading keys) to .env; Broker API alone may not have Data API access.",
+            "Market data returned an invalid response. Add ALPACA_API_KEY and ALPACA_SECRET_KEY (Paper Trading keys) for crypto charts.",
         },
         { status: 502 }
       );
     }
     if (!res.ok) {
       return NextResponse.json(
-        { error: data.message ?? "Failed to load bars" },
+        { error: data.message ?? "Failed to load crypto bars" },
         { status: res.status }
       );
     }
-    const bars = data.bars?.[symbol.trim()] ?? [];
-    return NextResponse.json({ bars, symbol: symbol.trim() });
+    const key = Object.keys(data.bars ?? {}).find(
+      (k) => k.toUpperCase() === cryptoSymbol.toUpperCase()
+    ) ?? cryptoSymbol;
+    const bars = data.bars?.[key] ?? [];
+    return NextResponse.json({ bars, symbol: cryptoSymbol });
   } catch (e) {
-    console.error("Alpaca bars error:", e);
+    console.error("Alpaca crypto bars error:", e);
     return NextResponse.json(
       { error: "Could not reach Alpaca" },
       { status: 502 }

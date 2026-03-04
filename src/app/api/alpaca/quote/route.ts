@@ -1,7 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { alpacaFetch, getDataApiUrl, hasAlpacaConfig } from "@/lib/alpaca";
+import { alpacaDataFetch, getDataApiUrl, hasAlpacaConfig } from "@/lib/alpaca";
 
 export const dynamic = "force-dynamic";
+
+function parseJsonSafe<T>(text: string): T | null {
+  const t = text.trim();
+  if (t.startsWith("{") || t.startsWith("[")) {
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
 
 export async function GET(request: NextRequest) {
   if (!hasAlpacaConfig()) {
@@ -21,8 +33,9 @@ export async function GET(request: NextRequest) {
   const params = new URLSearchParams({ symbols: symbol.trim() });
   const url = getDataApiUrl("/v2/stocks/quotes/latest", params.toString());
   try {
-    const res = await alpacaFetch(url, { cache: "no-store" });
-    const data = (await res.json()) as {
+    const res = await alpacaDataFetch(url, { cache: "no-store" });
+    const text = await res.text();
+    const data = parseJsonSafe<{
       quotes?: Record<
         string,
         {
@@ -34,7 +47,18 @@ export async function GET(request: NextRequest) {
         }
       >;
       message?: string;
-    };
+    }>(text);
+
+    if (!data) {
+      console.error("Alpaca quote non-JSON response:", text.slice(0, 200));
+      return NextResponse.json(
+        {
+          error:
+            "Market data returned an invalid response. For quotes, add ALPACA_API_KEY and ALPACA_SECRET_KEY (Paper Trading keys) to .env; Broker API alone may not have Data API access.",
+        },
+        { status: 502 }
+      );
+    }
     if (!res.ok) {
       return NextResponse.json(
         { error: data.message ?? "Failed to load quote" },
