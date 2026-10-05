@@ -16,6 +16,8 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+`.env` is committed encrypted with git-crypt. On a new machine, install git-crypt and run `git-crypt unlock ~/.config/git-crypt/nexow.ai/nexow-app.key` once. The working tree stays plaintext; the blob in git is ciphertext. Plaintext `.env.*` overrides stay gitignored, and the key file is never committed.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
